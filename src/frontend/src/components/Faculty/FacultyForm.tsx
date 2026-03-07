@@ -81,47 +81,17 @@ export default function FacultyForm({
       </div>
       <div>
         <Label
-          htmlFor="faculty-qualification"
-          className="text-foreground text-sm font-body"
-        >
-          Qualification
-        </Label>
-        <Input
-          id="faculty-qualification"
-          value={form.qualification}
-          onChange={(e) => handleChange("qualification", e.target.value)}
-          placeholder="e.g. M.Sc. Mathematics, B.Ed."
-          className={inputClass}
-        />
-      </div>
-      <div>
-        <Label
           htmlFor="faculty-bio"
           className="text-foreground text-sm font-body"
         >
-          Bio
+          About / Information
         </Label>
         <Textarea
           id="faculty-bio"
           value={form.bio}
           onChange={(e) => handleChange("bio", e.target.value)}
-          placeholder="Brief bio about the faculty member..."
-          className={`${inputClass} resize-none h-24`}
-        />
-      </div>
-      <div>
-        <Label
-          htmlFor="faculty-photo"
-          className="text-foreground text-sm font-body"
-        >
-          Photo URL (optional)
-        </Label>
-        <Input
-          id="faculty-photo"
-          value={form.photoUrl}
-          onChange={(e) => handleChange("photoUrl", e.target.value)}
-          placeholder="https://..."
-          className={inputClass}
+          placeholder="Write about the faculty member, their experience, achievements..."
+          className={`${inputClass} resize-none h-28`}
         />
       </div>
       <div className="flex gap-3 pt-2">

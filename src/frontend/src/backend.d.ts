@@ -96,6 +96,7 @@ export interface backendInterface {
     addFaculty(facultyMember: Faculty): Promise<void>;
     addGalleryItem(item: GalleryItem): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
+    claimFirstAdmin(): Promise<boolean>;
     deleteBatch(id: string): Promise<void>;
     deleteClassContent(id: string): Promise<void>;
     deleteFaculty(id: string): Promise<void>;

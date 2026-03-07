@@ -120,6 +120,7 @@ export interface _SERVICE {
   'addFaculty' : ActorMethod<[Faculty], undefined>,
   'addGalleryItem' : ActorMethod<[GalleryItem], undefined>,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
+  'claimFirstAdmin' : ActorMethod<[], boolean>,
   'deleteBatch' : ActorMethod<[string], undefined>,
   'deleteClassContent' : ActorMethod<[string], undefined>,
   'deleteFaculty' : ActorMethod<[string], undefined>,

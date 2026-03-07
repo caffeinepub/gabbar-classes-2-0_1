@@ -18,7 +18,6 @@ actor {
   let accessControlState = AccessControl.initState();
   include MixinAuthorization(accessControlState);
   
-  // Include prefabricated modules
   include MixinStorage();
 
   // User Profile Type
@@ -188,6 +187,7 @@ actor {
 
   // Storage
   var nextId = 0;
+  var adminAssigned = false;
 
   func generateId() : Text {
     let id = nextId;
@@ -490,5 +490,13 @@ actor {
       batchCount = batches.size();
       inquiryCount = admissionInquiries.size();
     };
+  };
+
+  public shared ({ caller }) func claimFirstAdmin() : async Bool {
+    if (caller.isAnonymous()) { return false };
+    if (adminAssigned) { return false };
+    accessControlState.userRoles.add(caller, #admin);
+    adminAssigned := true;
+    return true;
   };
 };

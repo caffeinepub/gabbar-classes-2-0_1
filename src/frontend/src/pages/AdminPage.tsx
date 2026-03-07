@@ -1,156 +1,172 @@
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useActor } from "@/hooks/useActor";
 import { useInternetIdentity } from "@/hooks/useInternetIdentity";
 import { useIsAdmin, useStats } from "@/hooks/useQueries";
-import { storeSessionParameter } from "@/utils/urlParams";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import {
+  AlertTriangle,
   CalendarDays,
   ChevronRight,
   FileText,
   GraduationCap,
   Images,
-  KeyRound,
   Loader2,
+  LogIn,
   MessageSquare,
   Shield,
   Users,
 } from "lucide-react";
 import { motion } from "motion/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-function AdminSetupForm() {
-  const [token, setToken] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const { actor } = useActor();
+function NotAdminView() {
   const { identity, login } = useInternetIdentity();
+  const { actor } = useActor();
   const queryClient = useQueryClient();
+  const [claiming, setClaiming] = useState(false);
+  const [claimFailed, setClaimFailed] = useState(false);
+  const [claimSucceeded, setClaimSucceeded] = useState(false);
 
-  const handleClaim = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!token.trim()) {
-      setError("Please enter the admin token.");
-      return;
-    }
-    setLoading(true);
-    setError("");
-    try {
-      if (!actor) {
-        setError("Not connected. Please log in first.");
-        setLoading(false);
-        return;
-      }
-      // Store token so it persists in session and is used on next actor init
-      storeSessionParameter("caffeineAdminToken", token.trim());
-      // Re-initialize access control with the provided token
-      await actor._initializeAccessControlWithSecret(token.trim());
-      // Invalidate all queries so isAdmin re-fetches
-      await queryClient.invalidateQueries();
-      await queryClient.refetchQueries();
-    } catch (err: unknown) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Failed to initialize. The token may be incorrect.",
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+  useEffect(() => {
+    if (!identity || !actor) return;
+    setClaiming(true);
+    actor
+      .claimFirstAdmin()
+      .then((success) => {
+        if (success) {
+          // Invalidate all queries so isAdmin re-fetches with fresh data
+          queryClient.invalidateQueries({ queryKey: ["isAdmin"] });
+          queryClient.refetchQueries({ queryKey: ["isAdmin"] });
+          setClaimSucceeded(true);
+          setClaiming(false);
+        } else {
+          setClaiming(false);
+          setClaimFailed(true);
+        }
+      })
+      .catch(() => {
+        setClaiming(false);
+        setClaimFailed(true);
+      });
+  }, [identity, actor, queryClient]);
 
-  return (
-    <main className="min-h-screen pt-24 pb-16 flex items-center justify-center px-4">
-      <motion.div
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-        className="w-full max-w-md"
-      >
-        <div className="dark-card rounded-2xl border border-[oklch(0.862_0.196_91.7/0.3)] p-8 space-y-6">
-          <div className="text-center">
-            <div className="w-14 h-14 rounded-full bg-[oklch(0.862_0.196_91.7/0.1)] border border-[oklch(0.862_0.196_91.7/0.4)] flex items-center justify-center mx-auto mb-4">
-              <KeyRound className="h-7 w-7 text-primary" />
+  if (!identity) {
+    return (
+      <main className="min-h-screen pt-24 pb-16 flex items-center justify-center px-4">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="w-full max-w-md text-center"
+        >
+          <div className="dark-card rounded-2xl border border-[oklch(0.862_0.196_91.7/0.3)] p-8 space-y-6">
+            <div className="w-14 h-14 rounded-full bg-[oklch(0.862_0.196_91.7/0.1)] border border-[oklch(0.862_0.196_91.7/0.4)] flex items-center justify-center mx-auto">
+              <LogIn className="h-7 w-7 text-primary" />
             </div>
-            <h1 className="text-2xl font-display font-bold text-gold-gradient">
-              Admin Setup
-            </h1>
-            <p className="text-muted-foreground font-body text-sm mt-2">
-              Enter the Caffeine admin token to claim admin privileges.
-            </p>
+            <div>
+              <h1 className="text-2xl font-display font-bold text-gold-gradient">
+                Login Required
+              </h1>
+              <p className="text-muted-foreground font-body text-sm mt-2">
+                Admin panel ke liye pehle login karein.
+              </p>
+            </div>
+            <Button
+              onClick={login}
+              data-ocid="admin.login.button"
+              className="w-full bg-primary text-primary-foreground hover:bg-gold-light font-heading font-bold h-12"
+            >
+              Login with Internet Identity
+            </Button>
           </div>
+        </motion.div>
+      </main>
+    );
+  }
 
-          {!identity ? (
-            <div className="space-y-4" data-ocid="admin.error_state">
-              <p className="text-muted-foreground font-body text-sm text-center">
-                You must be logged in to claim admin access.
-              </p>
-              <Button
-                onClick={login}
-                data-ocid="admin.login.button"
-                className="w-full bg-primary text-primary-foreground hover:bg-gold-light font-heading font-bold h-12"
-              >
-                Login First
-              </Button>
+  if (claiming || claimSucceeded) {
+    return (
+      <main
+        className="min-h-screen pt-24 pb-16 flex items-center justify-center px-4"
+        data-ocid="admin.claiming.loading_state"
+      >
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5 }}
+          className="text-center"
+        >
+          <div className="w-16 h-16 rounded-full bg-[oklch(0.862_0.196_91.7/0.1)] border border-[oklch(0.862_0.196_91.7/0.4)] flex items-center justify-center mx-auto mb-6">
+            <Loader2 className="h-8 w-8 text-primary animate-spin" />
+          </div>
+          <h2 className="text-xl font-display font-bold text-gold-gradient mb-2">
+            Admin Access Set Ho Raha Hai...
+          </h2>
+          <p className="text-muted-foreground font-body text-sm">
+            Bas ek second, admin panel khul raha hai.
+          </p>
+        </motion.div>
+      </main>
+    );
+  }
+
+  if (claimFailed) {
+    return (
+      <main className="min-h-screen pt-24 pb-16 flex items-center justify-center px-4">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="w-full max-w-md text-center"
+          data-ocid="admin.claim.error_state"
+        >
+          <div className="dark-card rounded-2xl border border-[oklch(0.862_0.196_91.7/0.3)] p-8 space-y-6">
+            <div className="w-14 h-14 rounded-full bg-amber-950/40 border border-amber-700/50 flex items-center justify-center mx-auto">
+              <AlertTriangle className="h-7 w-7 text-amber-400" />
             </div>
-          ) : (
-            <form onSubmit={handleClaim} className="space-y-4">
-              <div>
-                <Label className="text-foreground text-sm font-body mb-1 block">
-                  Admin Token
-                </Label>
-                <Input
-                  data-ocid="admin.token.input"
-                  type="password"
-                  value={token}
-                  onChange={(e) => setToken(e.target.value)}
-                  placeholder="Paste your Caffeine admin token"
-                  className="bg-[oklch(0.1_0_0)] border-[oklch(0.862_0.196_91.7/0.3)] focus:border-primary text-foreground placeholder:text-muted-foreground h-12"
-                  autoFocus
-                />
-              </div>
-              {error && (
-                <p
-                  className="text-destructive text-sm font-body"
-                  data-ocid="admin.token.error_state"
-                >
-                  {error}
-                </p>
-              )}
-              <Button
-                type="submit"
-                data-ocid="admin.token.submit_button"
-                disabled={loading}
-                className="w-full bg-primary text-primary-foreground hover:bg-gold-light font-heading font-bold h-12"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Verifying…
-                  </>
-                ) : (
-                  "Claim Admin Access"
-                )}
-              </Button>
-              <p className="text-muted-foreground/60 text-xs font-body text-center">
-                The admin token is provided in your Caffeine project dashboard.
+            <div>
+              <h1 className="text-2xl font-display font-bold text-gold-gradient">
+                Admin Access Unavailable
+              </h1>
+              <p className="text-muted-foreground font-body text-sm mt-3 leading-relaxed">
+                Admin access pahle hi kisi ne le liya hai. Sirf pehla login
+                karne wala admin ban sakta hai.
               </p>
-            </form>
-          )}
-        </div>
-      </motion.div>
-    </main>
-  );
+            </div>
+            <div className="p-4 rounded-xl bg-[oklch(0.862_0.196_91.7/0.05)] border border-[oklch(0.862_0.196_91.7/0.15)]">
+              <p className="text-xs font-body text-muted-foreground">
+                Agar aap hi app ke owner hain to please app creator se contact
+                karein.
+              </p>
+            </div>
+          </div>
+        </motion.div>
+      </main>
+    );
+  }
+
+  return null;
 }
 
 export default function AdminPage() {
   const { data: stats, isLoading } = useStats();
-  const { data: isAdmin } = useIsAdmin();
+  const {
+    data: isAdmin,
+    isLoading: isAdminLoading,
+    isFetching: isAdminFetching,
+  } = useIsAdmin();
+  const { actor, isFetching: actorFetching } = useActor();
+  const { identity } = useInternetIdentity();
 
-  if (isAdmin === undefined) {
+  // Show loading only when actor is ready but admin check is in progress
+  const showLoading =
+    (actorFetching || isAdminLoading || isAdminFetching) &&
+    !!identity &&
+    !!actor;
+
+  if (showLoading) {
     return (
       <main
         className="min-h-screen pt-24 pb-16 flex items-center justify-center"
@@ -159,7 +175,7 @@ export default function AdminPage() {
         <div className="text-center">
           <Loader2 className="h-12 w-12 text-primary/60 mx-auto mb-4 animate-spin" />
           <p className="text-muted-foreground font-body text-sm tracking-wide">
-            Verifying admin access…
+            Admin access verify ho raha hai...
           </p>
         </div>
       </main>
@@ -167,7 +183,7 @@ export default function AdminPage() {
   }
 
   if (!isAdmin) {
-    return <AdminSetupForm />;
+    return <NotAdminView />;
   }
 
   const STAT_CARDS = [
@@ -237,7 +253,7 @@ export default function AdminPage() {
       label: "Class Content",
       path: "/library",
       icon: GraduationCap,
-      ocid: "admin.faculty.link",
+      ocid: "admin.library.link",
     },
   ];
 

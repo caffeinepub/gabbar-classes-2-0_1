@@ -22,10 +22,15 @@ export function useIsAdmin() {
     queryKey: ["isAdmin"],
     queryFn: async () => {
       if (!actor) return false;
-      return actor.isCallerAdmin();
+      try {
+        return await actor.isCallerAdmin();
+      } catch {
+        return false;
+      }
     },
     enabled: !!actor && !isFetching,
-    staleTime: 1000 * 60 * 5,
+    staleTime: 0,
+    retry: 2,
   });
 }
 
@@ -312,10 +317,15 @@ export function useDeleteBatch() {
 // ── Admission Inquiries ───────────────────────────────────────────────
 export function useSubmitAdmissionInquiry() {
   const { actor } = useActor();
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: async (inquiry: AdmissionInquiry) => {
       if (!actor) throw new Error("Not connected");
       return actor.submitAdmissionInquiry(inquiry);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["inquiries"] });
+      qc.invalidateQueries({ queryKey: ["stats"] });
     },
   });
 }

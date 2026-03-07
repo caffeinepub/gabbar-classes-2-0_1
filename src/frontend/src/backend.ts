@@ -196,6 +196,7 @@ export interface backendInterface {
     addFaculty(facultyMember: Faculty): Promise<void>;
     addGalleryItem(item: GalleryItem): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
+    claimFirstAdmin(): Promise<boolean>;
     deleteBatch(id: string): Promise<void>;
     deleteClassContent(id: string): Promise<void>;
     deleteFaculty(id: string): Promise<void>;
@@ -387,6 +388,20 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.assignCallerUserRole(arg0, to_candid_UserRole_n14(this._uploadFile, this._downloadFile, arg1));
+            return result;
+        }
+    }
+    async claimFirstAdmin(): Promise<boolean> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.claimFirstAdmin();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.claimFirstAdmin();
             return result;
         }
     }

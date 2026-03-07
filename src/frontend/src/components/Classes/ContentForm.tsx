@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { ContentType } from "@/hooks/useQueries";
+import { FileUp, Paperclip } from "lucide-react";
 import { useState } from "react";
 
 interface ContentFormProps {
@@ -40,12 +41,30 @@ export default function ContentForm({
     classLevel,
     createdAt: BigInt(Date.now()),
   });
+  const [selectedFileName, setSelectedFileName] = useState("");
 
   const handleChange = (
     field: keyof ClassContent,
     value: string | ContentType | ClassLevel | bigint,
   ) => {
     setForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleContentTypeChange = (v: ContentType) => {
+    setForm((prev) => ({ ...prev, contentType: v, url: "", body: "" }));
+    setSelectedFileName("");
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setSelectedFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const dataUrl = ev.target?.result as string;
+      handleChange("url", dataUrl);
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -57,6 +76,10 @@ export default function ContentForm({
   const inputClass =
     "bg-[oklch(0.1_0_0)] border-[oklch(0.3_0.02_91.7)] focus:border-primary text-foreground placeholder:text-muted-foreground";
 
+  const isFileBased =
+    form.contentType === ContentType.pdf ||
+    form.contentType === ContentType.worksheet;
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
@@ -65,7 +88,7 @@ export default function ContentForm({
         </Label>
         <Select
           value={form.contentType}
-          onValueChange={(v) => handleChange("contentType", v as ContentType)}
+          onValueChange={(v) => handleContentTypeChange(v as ContentType)}
         >
           <SelectTrigger className={inputClass}>
             <SelectValue />
@@ -98,7 +121,64 @@ export default function ContentForm({
           className={inputClass}
         />
       </div>
-      {form.contentType !== ContentType.message && (
+
+      {/* File upload for PDF / Worksheet — uses <label> for native accessibility */}
+      {isFileBased && (
+        <div>
+          <span className="block text-foreground text-sm font-body mb-1">
+            {form.contentType === ContentType.pdf
+              ? "PDF File"
+              : "Worksheet File"}
+          </span>
+          <label
+            data-ocid="class.content.file.upload_button"
+            className={`
+              mt-1 cursor-pointer rounded-lg border-2 border-dashed transition-colors
+              flex items-center gap-3 px-4 py-3
+              ${
+                selectedFileName
+                  ? "border-primary bg-[oklch(0.12_0.03_91.7)]"
+                  : "border-[oklch(0.3_0.02_91.7)] bg-[oklch(0.1_0_0)] hover:border-primary hover:bg-[oklch(0.13_0.02_91.7)]"
+              }
+            `}
+          >
+            {selectedFileName ? (
+              <>
+                <Paperclip className="h-5 w-5 text-primary shrink-0" />
+                <span className="text-sm text-foreground truncate">
+                  {selectedFileName}
+                </span>
+              </>
+            ) : (
+              <>
+                <FileUp className="h-5 w-5 text-muted-foreground shrink-0" />
+                <div>
+                  <p className="text-sm text-muted-foreground">
+                    <span className="text-primary font-medium">
+                      Click to choose file
+                    </span>{" "}
+                    from your device
+                  </p>
+                  <p className="text-xs text-muted-foreground/60">
+                    PDF, DOC, DOCX, JPG, PNG
+                  </p>
+                </div>
+              </>
+            )}
+            <input
+              type="file"
+              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+              onChange={handleFileChange}
+              className="sr-only"
+              aria-label="Upload file"
+            />
+          </label>
+        </div>
+      )}
+
+      {/* URL input for Video / Test */}
+      {(form.contentType === ContentType.video ||
+        form.contentType === ContentType.test) && (
         <div>
           <Label className="text-foreground text-sm font-body">
             Resource URL
@@ -111,6 +191,8 @@ export default function ContentForm({
           />
         </div>
       )}
+
+      {/* Body textarea for Message */}
       {form.contentType === ContentType.message && (
         <div>
           <Label className="text-foreground text-sm font-body">
@@ -124,6 +206,7 @@ export default function ContentForm({
           />
         </div>
       )}
+
       <div className="flex gap-3 pt-2">
         <Button
           type="submit"
