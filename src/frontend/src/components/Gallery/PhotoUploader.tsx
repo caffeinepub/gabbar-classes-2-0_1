@@ -1,7 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ImagePlus, Upload, X } from "lucide-react";
+import { useFileUpload } from "@/hooks/useFileUpload";
+import { ImagePlus, Loader2, Upload, X } from "lucide-react";
 import { useState } from "react";
 
 interface PhotoUploaderProps {
@@ -22,16 +23,33 @@ export default function PhotoUploader({
   const [imageUrl, setImageUrl] = useState("");
   const [previewUrl, setPreviewUrl] = useState("");
   const [isDragging, setIsDragging] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
-  const handleFile = (file: File) => {
+  const { uploadFile } = useFileUpload();
+
+  const handleFile = async (file: File) => {
     if (!file.type.startsWith("image/")) return;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const dataUrl = e.target?.result as string;
-      setImageUrl(dataUrl);
-      setPreviewUrl(dataUrl);
-    };
-    reader.readAsDataURL(file);
+
+    // Show local preview immediately
+    const localPreview = URL.createObjectURL(file);
+    setPreviewUrl(localPreview);
+    setImageUrl(""); // Clear previous URL while uploading
+
+    setIsUploading(true);
+    setUploadProgress(0);
+
+    try {
+      const cdnUrl = await uploadFile(file, (pct) => setUploadProgress(pct));
+      setImageUrl(cdnUrl);
+    } catch (err) {
+      console.error("Photo upload failed:", err);
+      // Revert preview on error
+      URL.revokeObjectURL(localPreview);
+      setPreviewUrl("");
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -54,6 +72,7 @@ export default function PhotoUploader({
   const handleDragLeave = () => setIsDragging(false);
 
   const clearImage = () => {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
     setImageUrl("");
     setPreviewUrl("");
   };
@@ -64,12 +83,16 @@ export default function PhotoUploader({
     onUpload({ title, caption, imageUrl });
     setTitle("");
     setCaption("");
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
     setImageUrl("");
     setPreviewUrl("");
+    setUploadProgress(0);
   };
 
   const inputClass =
     "bg-[oklch(0.1_0_0)] border-[oklch(0.3_0.02_91.7)] focus:border-primary text-foreground placeholder:text-muted-foreground";
+
+  const isBusy = isLoading || isUploading;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
@@ -113,17 +136,40 @@ export default function PhotoUploader({
             alt="Preview"
             className="w-full h-48 object-cover"
           />
-          <button
-            type="button"
-            onClick={clearImage}
-            className="absolute top-2 right-2 rounded-full bg-[oklch(0.08_0_0)]/80 p-1 text-foreground hover:bg-destructive hover:text-white transition-colors"
-            aria-label="Remove image"
-          >
-            <X className="h-4 w-4" />
-          </button>
-          <p className="text-xs text-muted-foreground px-3 py-2">
-            ✓ Photo selected — ready to upload
-          </p>
+          {!isUploading && (
+            <button
+              type="button"
+              onClick={clearImage}
+              className="absolute top-2 right-2 rounded-full bg-[oklch(0.08_0_0)]/80 p-1 text-foreground hover:bg-destructive hover:text-white transition-colors"
+              aria-label="Remove image"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+          {isUploading ? (
+            <div className="px-3 py-2 flex items-center gap-2">
+              <Loader2 className="h-4 w-4 text-primary animate-spin shrink-0" />
+              <div className="flex-1">
+                <p className="text-xs text-primary font-medium">
+                  Uploading photo... {uploadProgress}%
+                </p>
+                <div className="mt-1 h-1 rounded-full bg-[oklch(0.2_0_0)] overflow-hidden">
+                  <div
+                    className="h-full bg-primary transition-all duration-300"
+                    style={{ width: `${uploadProgress}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          ) : imageUrl ? (
+            <p className="text-xs text-green-400 px-3 py-2">
+              ✓ Photo ready to upload
+            </p>
+          ) : (
+            <p className="text-xs text-destructive px-3 py-2">
+              ✗ Upload failed — please try again
+            </p>
+          )}
         </div>
       )}
 
@@ -147,12 +193,21 @@ export default function PhotoUploader({
       </div>
       <Button
         type="submit"
-        disabled={isLoading || !imageUrl}
+        disabled={isBusy || !imageUrl}
         data-ocid="gallery.upload.upload_button"
         className="w-full bg-primary text-primary-foreground hover:bg-gold-light font-heading disabled:opacity-50"
       >
-        <Upload className="h-4 w-4 mr-2" />
-        {isLoading ? "Uploading..." : "Upload Photo"}
+        {isBusy ? (
+          <>
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            {isUploading ? "Uploading photo..." : "Saving..."}
+          </>
+        ) : (
+          <>
+            <Upload className="h-4 w-4 mr-2" />
+            Upload Photo
+          </>
+        )}
       </Button>
     </form>
   );

@@ -10,8 +10,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { useFileUpload } from "@/hooks/useFileUpload";
 import { ContentType } from "@/hooks/useQueries";
-import { FileUp, Paperclip } from "lucide-react";
+import { FileUp, Loader2, Paperclip } from "lucide-react";
 import { useState } from "react";
 
 interface ContentFormProps {
@@ -42,6 +43,10 @@ export default function ContentForm({
     createdAt: BigInt(Date.now()),
   });
   const [selectedFileName, setSelectedFileName] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+
+  const { uploadFile } = useFileUpload();
 
   const handleChange = (
     field: keyof ClassContent,
@@ -53,18 +58,28 @@ export default function ContentForm({
   const handleContentTypeChange = (v: ContentType) => {
     setForm((prev) => ({ ...prev, contentType: v, url: "", body: "" }));
     setSelectedFileName("");
+    setUploadProgress(0);
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
     setSelectedFileName(file.name);
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const dataUrl = ev.target?.result as string;
-      handleChange("url", dataUrl);
-    };
-    reader.readAsDataURL(file);
+    handleChange("url", ""); // Clear previous URL while uploading
+    setIsUploading(true);
+    setUploadProgress(0);
+
+    try {
+      const cdnUrl = await uploadFile(file, (pct) => setUploadProgress(pct));
+      handleChange("url", cdnUrl);
+    } catch (err) {
+      console.error("File upload failed:", err);
+      setSelectedFileName("");
+      handleChange("url", "");
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -79,6 +94,8 @@ export default function ContentForm({
   const isFileBased =
     form.contentType === ContentType.pdf ||
     form.contentType === ContentType.worksheet;
+
+  const isBusy = isLoading || isUploading;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -136,13 +153,30 @@ export default function ContentForm({
               mt-1 cursor-pointer rounded-lg border-2 border-dashed transition-colors
               flex items-center gap-3 px-4 py-3
               ${
-                selectedFileName
-                  ? "border-primary bg-[oklch(0.12_0.03_91.7)]"
-                  : "border-[oklch(0.3_0.02_91.7)] bg-[oklch(0.1_0_0)] hover:border-primary hover:bg-[oklch(0.13_0.02_91.7)]"
+                isUploading
+                  ? "border-primary bg-[oklch(0.12_0.03_91.7)] cursor-wait"
+                  : selectedFileName && form.url
+                    ? "border-primary bg-[oklch(0.12_0.03_91.7)]"
+                    : "border-[oklch(0.3_0.02_91.7)] bg-[oklch(0.1_0_0)] hover:border-primary hover:bg-[oklch(0.13_0.02_91.7)]"
               }
             `}
           >
-            {selectedFileName ? (
+            {isUploading ? (
+              <div className="flex items-center gap-3 w-full">
+                <Loader2 className="h-5 w-5 text-primary shrink-0 animate-spin" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-primary font-medium truncate">
+                    Uploading {selectedFileName}... {uploadProgress}%
+                  </p>
+                  <div className="mt-1 h-1 rounded-full bg-[oklch(0.2_0_0)] overflow-hidden">
+                    <div
+                      className="h-full bg-primary transition-all duration-300"
+                      style={{ width: `${uploadProgress}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            ) : selectedFileName && form.url ? (
               <>
                 <Paperclip className="h-5 w-5 text-primary shrink-0" />
                 <span className="text-sm text-foreground truncate">
@@ -171,6 +205,7 @@ export default function ContentForm({
               onChange={handleFileChange}
               className="sr-only"
               aria-label="Upload file"
+              disabled={isUploading}
             />
           </label>
         </div>
@@ -210,11 +245,18 @@ export default function ContentForm({
       <div className="flex gap-3 pt-2">
         <Button
           type="submit"
-          disabled={isLoading}
+          disabled={isBusy}
           data-ocid="class.content.save_button"
           className="flex-1 bg-primary text-primary-foreground hover:bg-gold-light font-heading"
         >
-          {isLoading ? "Adding..." : "Add Content"}
+          {isBusy ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              {isUploading ? "Uploading file..." : "Adding..."}
+            </>
+          ) : (
+            "Add Content"
+          )}
         </Button>
         <Button
           type="button"
