@@ -6,7 +6,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useInternetIdentity } from "@/hooks/useInternetIdentity";
-import { useIsAdmin } from "@/hooks/useQueries";
 import { Link, useLocation } from "@tanstack/react-router";
 import { ChevronDown, GraduationCap, Menu, Shield, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
@@ -37,7 +36,6 @@ const NAV_LINKS = [
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { identity, login, clear } = useInternetIdentity();
-  const { data: isAdmin } = useIsAdmin();
   const location = useLocation();
 
   const isActive = (path: string) => location.pathname === path;
@@ -111,7 +109,7 @@ export default function Navbar() {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {isAdmin && (
+            {identity && (
               <Link
                 to="/admin"
                 data-ocid="nav.admin.link"
@@ -202,7 +200,7 @@ export default function Navbar() {
                     ))}
                   </div>
                 </div>
-                {isAdmin && (
+                {identity && (
                   <Link
                     to="/admin"
                     data-ocid="nav.admin.link"

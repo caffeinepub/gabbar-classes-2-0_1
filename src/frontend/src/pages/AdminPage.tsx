@@ -1,5 +1,12 @@
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useActor } from "@/hooks/useActor";
+import { useInternetIdentity } from "@/hooks/useInternetIdentity";
 import { useIsAdmin, useStats } from "@/hooks/useQueries";
+import { storeSessionParameter } from "@/utils/urlParams";
+import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import {
   CalendarDays,
@@ -7,30 +14,160 @@ import {
   FileText,
   GraduationCap,
   Images,
+  KeyRound,
+  Loader2,
   MessageSquare,
   Shield,
   Users,
 } from "lucide-react";
 import { motion } from "motion/react";
+import { useState } from "react";
+
+function AdminSetupForm() {
+  const [token, setToken] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const { actor } = useActor();
+  const { identity, login } = useInternetIdentity();
+  const queryClient = useQueryClient();
+
+  const handleClaim = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!token.trim()) {
+      setError("Please enter the admin token.");
+      return;
+    }
+    setLoading(true);
+    setError("");
+    try {
+      if (!actor) {
+        setError("Not connected. Please log in first.");
+        setLoading(false);
+        return;
+      }
+      // Store token so it persists in session and is used on next actor init
+      storeSessionParameter("caffeineAdminToken", token.trim());
+      // Re-initialize access control with the provided token
+      await actor._initializeAccessControlWithSecret(token.trim());
+      // Invalidate all queries so isAdmin re-fetches
+      await queryClient.invalidateQueries();
+      await queryClient.refetchQueries();
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to initialize. The token may be incorrect.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <main className="min-h-screen pt-24 pb-16 flex items-center justify-center px-4">
+      <motion.div
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+        className="w-full max-w-md"
+      >
+        <div className="dark-card rounded-2xl border border-[oklch(0.862_0.196_91.7/0.3)] p-8 space-y-6">
+          <div className="text-center">
+            <div className="w-14 h-14 rounded-full bg-[oklch(0.862_0.196_91.7/0.1)] border border-[oklch(0.862_0.196_91.7/0.4)] flex items-center justify-center mx-auto mb-4">
+              <KeyRound className="h-7 w-7 text-primary" />
+            </div>
+            <h1 className="text-2xl font-display font-bold text-gold-gradient">
+              Admin Setup
+            </h1>
+            <p className="text-muted-foreground font-body text-sm mt-2">
+              Enter the Caffeine admin token to claim admin privileges.
+            </p>
+          </div>
+
+          {!identity ? (
+            <div className="space-y-4" data-ocid="admin.error_state">
+              <p className="text-muted-foreground font-body text-sm text-center">
+                You must be logged in to claim admin access.
+              </p>
+              <Button
+                onClick={login}
+                data-ocid="admin.login.button"
+                className="w-full bg-primary text-primary-foreground hover:bg-gold-light font-heading font-bold h-12"
+              >
+                Login First
+              </Button>
+            </div>
+          ) : (
+            <form onSubmit={handleClaim} className="space-y-4">
+              <div>
+                <Label className="text-foreground text-sm font-body mb-1 block">
+                  Admin Token
+                </Label>
+                <Input
+                  data-ocid="admin.token.input"
+                  type="password"
+                  value={token}
+                  onChange={(e) => setToken(e.target.value)}
+                  placeholder="Paste your Caffeine admin token"
+                  className="bg-[oklch(0.1_0_0)] border-[oklch(0.862_0.196_91.7/0.3)] focus:border-primary text-foreground placeholder:text-muted-foreground h-12"
+                  autoFocus
+                />
+              </div>
+              {error && (
+                <p
+                  className="text-destructive text-sm font-body"
+                  data-ocid="admin.token.error_state"
+                >
+                  {error}
+                </p>
+              )}
+              <Button
+                type="submit"
+                data-ocid="admin.token.submit_button"
+                disabled={loading}
+                className="w-full bg-primary text-primary-foreground hover:bg-gold-light font-heading font-bold h-12"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Verifying…
+                  </>
+                ) : (
+                  "Claim Admin Access"
+                )}
+              </Button>
+              <p className="text-muted-foreground/60 text-xs font-body text-center">
+                The admin token is provided in your Caffeine project dashboard.
+              </p>
+            </form>
+          )}
+        </div>
+      </motion.div>
+    </main>
+  );
+}
 
 export default function AdminPage() {
   const { data: stats, isLoading } = useStats();
   const { data: isAdmin } = useIsAdmin();
 
-  if (!isAdmin && isAdmin !== undefined) {
+  if (isAdmin === undefined) {
     return (
-      <main className="min-h-screen pt-24 pb-16 flex items-center justify-center">
+      <main
+        className="min-h-screen pt-24 pb-16 flex items-center justify-center"
+        data-ocid="admin.loading_state"
+      >
         <div className="text-center">
-          <Shield className="h-16 w-16 text-primary/30 mx-auto mb-4" />
-          <h1 className="text-2xl font-display font-bold text-muted-foreground">
-            Access Denied
-          </h1>
-          <p className="text-muted-foreground font-body mt-2">
-            You need admin privileges to access this page.
+          <Loader2 className="h-12 w-12 text-primary/60 mx-auto mb-4 animate-spin" />
+          <p className="text-muted-foreground font-body text-sm tracking-wide">
+            Verifying admin access…
           </p>
         </div>
       </main>
     );
+  }
+
+  if (!isAdmin) {
+    return <AdminSetupForm />;
   }
 
   const STAT_CARDS = [
