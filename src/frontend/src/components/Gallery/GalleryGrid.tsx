@@ -2,6 +2,7 @@ import type { GalleryItem } from "@/backend.d";
 import { Button } from "@/components/ui/button";
 import { ImageIcon, Trash2 } from "lucide-react";
 import { motion } from "motion/react";
+import { useState } from "react";
 
 interface GalleryGridProps {
   items: GalleryItem[];
@@ -23,6 +24,12 @@ export default function GalleryGrid({
   isAdmin,
   onDelete,
 }: GalleryGridProps) {
+  const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
+
+  const handleImageError = (id: string) => {
+    setFailedImages((prev) => new Set([...prev, id]));
+  };
+
   if (items.length === 0) {
     return (
       <div
@@ -52,12 +59,14 @@ export default function GalleryGrid({
           transition={{ duration: 0.4, delay: (i % 8) * 0.05 }}
           className="break-inside-avoid group relative overflow-hidden rounded-xl border border-[oklch(0.25_0.02_91.7)] hover:border-[oklch(0.862_0.196_91.7/0.6)] transition-all duration-300"
         >
-          {item.imageUrl ? (
+          {item.imageUrl && !failedImages.has(item.id) ? (
             <img
               src={item.imageUrl}
               alt={item.title || item.caption}
               className="w-full object-cover"
               loading="lazy"
+              crossOrigin="anonymous"
+              onError={() => handleImageError(item.id)}
             />
           ) : (
             <div

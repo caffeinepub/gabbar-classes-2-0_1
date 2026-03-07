@@ -10,6 +10,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useActor } from "@/hooks/useActor";
 import {
   ClassLevel,
   useAddClassContent,
@@ -53,6 +54,7 @@ export default function ClassPage() {
   const classLevel = CLASS_LEVEL_MAP[rawLevel] ?? ClassLevel.Nursery;
   const displayLabel = CLASS_LABELS[rawLevel] ?? rawLevel;
 
+  const { isFetching: actorFetching } = useActor();
   const { data: contents = [], isLoading } = useClassContent(classLevel);
   const { data: isAdmin } = useIsAdmin();
   const addContent = useAddClassContent();
@@ -133,7 +135,7 @@ export default function ClassPage() {
         </motion.div>
 
         {/* Loading */}
-        {isLoading && (
+        {(actorFetching || isLoading) && (
           <div data-ocid="class.content.loading_state" className="space-y-3">
             {[1, 2, 3].map((i) => (
               <Skeleton
@@ -145,7 +147,7 @@ export default function ClassPage() {
         )}
 
         {/* Content Tabs */}
-        {!isLoading && (
+        {!actorFetching && !isLoading && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}

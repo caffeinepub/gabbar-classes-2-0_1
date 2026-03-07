@@ -95,9 +95,19 @@ export default function ContentList({
                 href={item.url}
                 target="_blank"
                 rel="noopener noreferrer"
+                download={
+                  contentType === ContentType.pdf ||
+                  contentType === ContentType.worksheet
+                    ? true
+                    : undefined
+                }
                 className="inline-flex items-center gap-1 text-primary text-xs font-body mt-1.5 hover:text-gold-light transition-colors"
               >
-                <ExternalLink className="h-3 w-3" /> Open Resource
+                <ExternalLink className="h-3 w-3" />
+                {contentType === ContentType.pdf ||
+                contentType === ContentType.worksheet
+                  ? "Download File"
+                  : "Open Resource"}
               </a>
             )}
           </div>

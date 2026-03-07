@@ -89,6 +89,9 @@ export function useAllFaculty() {
       return actor.getAllFaculty();
     },
     enabled: !!actor && !isFetching,
+    staleTime: 0,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
   });
 }
 
@@ -144,6 +147,9 @@ export function useAllGalleryItems() {
       return actor.getAllGalleryItems();
     },
     enabled: !!actor && !isFetching,
+    staleTime: 0,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
   });
 }
 
@@ -187,6 +193,9 @@ export function useClassContent(classLevel: ClassLevel) {
       return actor.getByClass(classLevel);
     },
     enabled: !!actor && !isFetching,
+    staleTime: 0,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
   });
 }
 
@@ -202,6 +211,9 @@ export function useClassContentByType(
       return actor.getByClassAndType(classLevel, contentType);
     },
     enabled: !!actor && !isFetching,
+    staleTime: 0,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
   });
 }
 
@@ -252,6 +264,9 @@ export function useAllBatches() {
       return actor.getAllBatches();
     },
     enabled: !!actor && !isFetching,
+    staleTime: 0,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
   });
 }
 

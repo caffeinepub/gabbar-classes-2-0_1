@@ -10,13 +10,14 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useActor } from "@/hooks/useActor";
 import {
   useAddGalleryItem,
   useAllGalleryItems,
   useDeleteGalleryItem,
   useIsAdmin,
 } from "@/hooks/useQueries";
-import { Plus } from "lucide-react";
+import { Loader2, Plus, RefreshCw } from "lucide-react";
 import { motion } from "motion/react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -26,7 +27,13 @@ function generateId() {
 }
 
 export default function GalleryPage() {
-  const { data: items = [], isLoading } = useAllGalleryItems();
+  const { isFetching: actorFetching } = useActor();
+  const {
+    data: items = [],
+    isLoading,
+    refetch,
+    isFetching: galleryFetching,
+  } = useAllGalleryItems();
   const { data: isAdmin } = useIsAdmin();
   const addItem = useAddGalleryItem();
   const deleteItem = useDeleteGalleryItem();
@@ -62,6 +69,13 @@ export default function GalleryPage() {
     }
   };
 
+  const handleRefresh = () => {
+    refetch();
+    toast.success("Gallery refreshed!");
+  };
+
+  const showLoading = actorFetching || isLoading;
+
   return (
     <main className="min-h-screen pt-24 pb-16">
       <div className="max-w-7xl mx-auto px-4">
@@ -80,33 +94,52 @@ export default function GalleryPage() {
               Gallery
             </h1>
           </div>
-          {isAdmin && (
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-              <DialogTrigger asChild>
-                <Button
-                  data-ocid="gallery.upload.upload_button"
-                  className="bg-primary text-primary-foreground hover:bg-gold-light font-heading font-semibold"
-                >
-                  <Plus className="h-4 w-4 mr-2" /> Add Photo
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="bg-[oklch(0.13_0_0)] border-[oklch(0.3_0.02_91.7)] max-w-md">
-                <DialogHeader>
-                  <DialogTitle className="text-gold-gradient font-display text-xl">
-                    Add Photo to Gallery
-                  </DialogTitle>
-                </DialogHeader>
-                <PhotoUploader
-                  onUpload={handleUpload}
-                  isLoading={addItem.isPending}
-                />
-              </DialogContent>
-            </Dialog>
-          )}
+          <div className="flex items-center gap-2">
+            {/* Refresh button — visible to everyone */}
+            <Button
+              data-ocid="gallery.refresh.button"
+              variant="outline"
+              size="sm"
+              onClick={handleRefresh}
+              disabled={galleryFetching}
+              className="border-[oklch(0.3_0.02_91.7)] text-muted-foreground hover:text-foreground hover:border-primary/50 font-heading"
+            >
+              {galleryFetching ? (
+                <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4 mr-1.5" />
+              )}
+              Refresh
+            </Button>
+
+            {isAdmin && (
+              <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button
+                    data-ocid="gallery.upload.upload_button"
+                    className="bg-primary text-primary-foreground hover:bg-gold-light font-heading font-semibold"
+                  >
+                    <Plus className="h-4 w-4 mr-2" /> Add Photo
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="bg-[oklch(0.13_0_0)] border-[oklch(0.3_0.02_91.7)] max-w-md">
+                  <DialogHeader>
+                    <DialogTitle className="text-gold-gradient font-display text-xl">
+                      Add Photo to Gallery
+                    </DialogTitle>
+                  </DialogHeader>
+                  <PhotoUploader
+                    onUpload={handleUpload}
+                    isLoading={addItem.isPending}
+                  />
+                </DialogContent>
+              </Dialog>
+            )}
+          </div>
         </motion.div>
 
         {/* Loading */}
-        {isLoading && (
+        {showLoading && (
           <div
             data-ocid="gallery.loading_state"
             className="columns-1 sm:columns-2 lg:columns-3 gap-4"
@@ -123,7 +156,7 @@ export default function GalleryPage() {
         )}
 
         {/* Gallery Grid */}
-        {!isLoading && (
+        {!showLoading && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
