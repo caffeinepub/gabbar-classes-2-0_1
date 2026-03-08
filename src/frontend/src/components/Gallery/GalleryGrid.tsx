@@ -37,11 +37,9 @@ export default function GalleryGrid({
         className="text-center py-20 dark-card rounded-xl border border-[oklch(0.25_0.02_91.7)]"
       >
         <ImageIcon className="h-12 w-12 text-primary/30 mx-auto mb-4" />
-        <p className="text-muted-foreground font-body text-lg">
-          Gallery coming soon
-        </p>
+        <p className="text-muted-foreground font-body text-lg">No photos yet</p>
         <p className="text-muted-foreground/60 font-body text-sm mt-2">
-          Photos from our institute will appear here.
+          Admin uploads photos here and they appear for everyone.
         </p>
       </div>
     );

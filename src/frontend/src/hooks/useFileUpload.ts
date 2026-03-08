@@ -2,17 +2,18 @@ import { loadConfig } from "@/config";
 import { StorageClient } from "@/utils/StorageClient";
 import { HttpAgent } from "@icp-sdk/core/agent";
 import { useActor } from "./useActor";
+import { useInternetIdentity } from "./useInternetIdentity";
 
 /**
  * Hook that provides a `uploadFile` function for uploading binary files
  * to blob storage and getting back a CDN URL.
  *
- * This mirrors the pattern used in config.ts's `createActorWithConfig`,
- * but exposes it to components that need to upload files before calling
- * backend mutations (gallery images, class material PDFs, etc.)
+ * Uses the authenticated identity so that the certificate call to the
+ * backend canister is signed — required for blob storage to work.
  */
 export function useFileUpload() {
   const { isFetching } = useActor();
+  const { identity } = useInternetIdentity();
 
   const uploadFile = async (
     file: File,
@@ -20,9 +21,16 @@ export function useFileUpload() {
   ): Promise<string> => {
     const config = await loadConfig();
 
-    const agent = new HttpAgent({
+    const agentOptions: ConstructorParameters<typeof HttpAgent>[0] = {
       host: config.backend_host,
-    });
+    };
+
+    // Use the authenticated identity if available so certificate calls are signed
+    if (identity) {
+      agentOptions.identity = identity;
+    }
+
+    const agent = new HttpAgent(agentOptions);
 
     if (config.backend_host?.includes("localhost")) {
       await agent.fetchRootKey().catch(() => {

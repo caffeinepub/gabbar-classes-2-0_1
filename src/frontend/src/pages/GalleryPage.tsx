@@ -53,6 +53,8 @@ export default function GalleryPage() {
       await addItem.mutateAsync(item);
       toast.success("Photo added to gallery!");
       setDialogOpen(false);
+      // Force a fresh fetch so the new photo appears immediately
+      setTimeout(() => refetch(), 500);
     } catch {
       toast.error("Failed to add photo.");
     }
@@ -62,6 +64,8 @@ export default function GalleryPage() {
     try {
       await deleteItem.mutateAsync(id);
       toast.success("Photo removed.");
+      // Force a fresh fetch so the deleted photo disappears immediately
+      setTimeout(() => refetch(), 500);
     } catch {
       toast.error("Failed to delete photo.");
     }

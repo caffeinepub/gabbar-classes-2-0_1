@@ -1,35 +1,31 @@
 # Gabbar Classes 2.0
 
 ## Current State
-- Gallery page loads items from `getAllGalleryItems()` backend call and displays them in `GalleryGrid`
-- Class content pages load items via `getByClass()` and display them in `ContentList`
-- Photos are uploaded via `PhotoUploader` using `useFileUpload` → `StorageClient` → CDN URL stored in backend
-- Files (PDF/worksheet) are uploaded via `ContentForm` using the same flow
-- All queries use `enabled: !!actor && !isFetching` pattern
-- The `getDirectURL` returns a URL in format: `${storageGatewayUrl}/v1/blob/?blob_hash=...&owner_id=...&project_id=...`
-- `GalleryGrid` renders images with `<img src={item.imageUrl}>` — no fallback error handling
-- `ContentList` renders file URLs with a plain `<a>` tag
+Gallery section shows "Gallery coming soon" after uploading photos. Root causes:
+1. `useAllGalleryItems` query has `enabled: !isFetching` (not `!!actor && !isFetching`), so it fires with a null actor, returns `[]`, caches it as empty, and the cached empty result persists.
+2. `useFileUpload` creates a fresh anonymous `HttpAgent` instead of reusing the authenticated actor's agent — so the certificate call for blob storage may be unauthenticated/fail silently, meaning the CDN URL never gets stored.
+3. After `addGalleryItem` succeeds, `invalidateQueries` is called but stale cache from the initial empty fetch may still be served.
+4. Admin gallery section has no gallery view — admin must navigate to `/gallery` to see photos.
 
 ## Requested Changes (Diff)
 
 ### Add
-- Error handling for broken/failed image loads in `GalleryGrid` — show placeholder when `<img>` fails to load (onerror fallback)
-- Visual feedback in `ContentList` when a resource URL is a CDN blob URL (show "Download" label instead of just "Open Resource")
-- A "Retry" / "Refresh" button on the gallery page to manually refetch items if the initial load fails
-- Better loading state handling: show skeleton until actor AND gallery data are both ready
+- A `useFileUpload` that reuses the authenticated actor from `useActor` instead of creating a new anonymous agent
+- A gallery preview section in the admin panel (or redirect to gallery)
+- Force refetch of gallery after add/delete
 
 ### Modify
-- `GalleryGrid.tsx`: Add `onError` handler on `<img>` to show placeholder on load failure; add `crossOrigin="anonymous"` attribute to help with CORS
-- `useQueries.ts`: Fix `useAllGalleryItems` and `useClassContent` / `useClassContentByType` to use `staleTime: 0` and `refetchOnMount: true` so data always refreshes on page visit
-- `GalleryPage.tsx`: Add manual refetch button; show proper loading state while actor is initializing
-- `ContentList.tsx`: improve the "Open Resource" link to open in new tab with proper rel attributes, and add a download attribute for PDF/worksheet URLs
+- `useAllGalleryItems`: change `enabled: !isFetching` to `enabled: !!actor && !isFetching` so it only runs once actor is ready
+- `useFileUpload`: replace anonymous `HttpAgent` creation with identity-aware agent using the actor's identity from `useInternetIdentity`
+- `GalleryPage`: after upload success, call `refetch()` explicitly in addition to invalidation
+- `GalleryGrid` empty state: change text to show "No photos yet" instead of "Gallery coming soon" (which confuses users when items actually exist but fail to load)
 
 ### Remove
-- Nothing removed
+- The silent swallow of upload errors — show proper error toast when CDN upload fails
 
 ## Implementation Plan
-1. Update `useAllGalleryItems` in `useQueries.ts` to add `staleTime: 0` and `refetchOnMount: true` so gallery always loads fresh data
-2. Update `useClassContent` and `useClassContentByType` with same staleness fix
-3. Update `GalleryGrid.tsx` to handle broken image URLs gracefully with `onError` fallback and `crossOrigin="anonymous"`
-4. Update `GalleryPage.tsx` to show actor-initializing loading state and add a manual refresh button
-5. Update `ContentList.tsx` to improve resource link opening with proper attributes
+1. Fix `useFileUpload.ts` to use authenticated identity from `useInternetIdentity` hook
+2. Fix `useQueries.ts` `useAllGalleryItems` to require actor: `enabled: !!actor && !isFetching`
+3. Fix `GalleryPage.tsx` to call `refetch()` after successful add
+4. Fix `GalleryGrid.tsx` empty state text so it doesn't say "coming soon"
+5. Add error handling in `PhotoUploader.tsx` to surface upload failures

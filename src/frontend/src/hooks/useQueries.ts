@@ -159,7 +159,7 @@ export function useAllGalleryItems() {
         return [];
       }
     },
-    enabled: !isFetching,
+    enabled: !!actor && !isFetching,
     staleTime: 0,
     refetchOnMount: "always",
     refetchOnWindowFocus: true,

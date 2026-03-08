@@ -4,6 +4,7 @@ import { Label } from "@/components/ui/label";
 import { useFileUpload } from "@/hooks/useFileUpload";
 import { ImagePlus, Loader2, Upload, X } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 
 interface PhotoUploaderProps {
   onUpload: (data: {
@@ -44,6 +45,7 @@ export default function PhotoUploader({
       setImageUrl(cdnUrl);
     } catch (err) {
       console.error("Photo upload failed:", err);
+      toast.error("Photo upload failed. Please try again.");
       // Revert preview on error
       URL.revokeObjectURL(localPreview);
       setPreviewUrl("");
