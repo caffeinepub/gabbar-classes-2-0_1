@@ -1,6 +1,8 @@
 import { Button } from "@/components/ui/button";
+import { useActor } from "@/hooks/useActor";
 import { useInternetIdentity } from "@/hooks/useInternetIdentity";
 import { useStats } from "@/hooks/useQueries";
+import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import {
   CalendarDays,
@@ -8,6 +10,7 @@ import {
   FileText,
   GraduationCap,
   Images,
+  Loader2,
   LogIn,
   MessageSquare,
   Shield,
@@ -15,10 +18,62 @@ import {
   Users2,
 } from "lucide-react";
 import { motion } from "motion/react";
+import { useEffect, useRef, useState } from "react";
 
 export default function AdminPage() {
   const { identity, login } = useInternetIdentity();
+  const { actor, isFetching: actorFetching } = useActor();
   const { data: stats, isLoading: statsLoading } = useStats();
+  const qc = useQueryClient();
+  const claimAttemptedRef = useRef(false);
+  const [isClaimingAdmin, setIsClaimingAdmin] = useState(false);
+
+  // Auto-claim admin when actor is ready and user is logged in
+  useEffect(() => {
+    if (actor && !actorFetching && identity && !claimAttemptedRef.current) {
+      setIsClaimingAdmin(true);
+      actor
+        .claimFirstAdmin()
+        .then(() => {
+          // Only mark as attempted after the call succeeds so remounts can retry
+          claimAttemptedRef.current = true;
+          qc.invalidateQueries({ queryKey: ["isAdmin"] });
+          qc.invalidateQueries({ queryKey: ["stats"] });
+        })
+        .catch(() => {
+          // Ignore -- may already be claimed by someone else; mark attempted so
+          // we don't spam the backend with retries in the same session
+          claimAttemptedRef.current = true;
+        })
+        .finally(() => {
+          setIsClaimingAdmin(false);
+        });
+    }
+  }, [actor, actorFetching, identity, qc]);
+
+  // Show loading while claiming admin
+  if (identity && isClaimingAdmin) {
+    return (
+      <main className="min-h-screen pt-24 pb-16 flex items-center justify-center px-4">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="w-full max-w-md text-center"
+        >
+          <div className="dark-card rounded-2xl border border-[oklch(0.862_0.196_91.7/0.3)] p-8 space-y-4">
+            <Loader2 className="h-10 w-10 text-primary animate-spin mx-auto" />
+            <p className="text-foreground font-heading font-semibold">
+              Admin access set ho raha hai...
+            </p>
+            <p className="text-muted-foreground font-body text-sm">
+              Kuch seconds mein dashboard khul jaayega.
+            </p>
+          </div>
+        </motion.div>
+      </main>
+    );
+  }
 
   // Not logged in -- show login prompt
   if (!identity) {

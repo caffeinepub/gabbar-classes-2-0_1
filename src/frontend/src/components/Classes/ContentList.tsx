@@ -41,26 +41,39 @@ const CONTENT_COLORS: Record<ContentType, string> = {
   [ContentType.test]: "text-purple-400",
 };
 
+const openFile = (url: string) => {
+  const lower = url.toLowerCase().split("?")[0];
+  const isImage = /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(lower);
+  const isPdf = /\.pdf$/i.test(lower);
+
+  if (isImage) {
+    window.open(url, "_blank", "noopener,noreferrer");
+  } else if (isPdf) {
+    const viewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(url)}`;
+    window.open(viewerUrl, "_blank", "noopener,noreferrer");
+  } else {
+    // Doc/Docx and other files — use Google Docs viewer
+    const viewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(url)}`;
+    window.open(viewerUrl, "_blank", "noopener,noreferrer");
+  }
+};
+
 function DownloadButton({ url, title }: { url: string; title: string }) {
   const [downloading, setDownloading] = useState(false);
 
-  const handleDownload = async () => {
+  const handleDownload = () => {
     setDownloading(true);
     try {
-      const response = await fetch(url);
-      if (!response.ok) throw new Error("Failed to fetch file");
-      const blob = await response.blob();
-      const objectUrl = URL.createObjectURL(blob);
       const anchor = document.createElement("a");
-      anchor.href = objectUrl;
+      anchor.href = url;
       anchor.download = title || "download";
+      anchor.target = "_blank";
+      anchor.rel = "noopener noreferrer";
       document.body.appendChild(anchor);
       anchor.click();
       document.body.removeChild(anchor);
-      URL.revokeObjectURL(objectUrl);
-      toast.success("Download started!");
+      toast.success("Download starting...");
     } catch {
-      // Fallback: open in new tab if fetch fails (e.g. CORS)
       window.open(url, "_blank", "noopener,noreferrer");
       toast.info("Opening file in new tab.");
     } finally {
@@ -148,6 +161,21 @@ export default function ContentList({
               </p>
             )}
 
+            {/* Image thumbnail preview if content is an image file */}
+            {item.url &&
+              isFileType &&
+              /\.(jpg|jpeg|png|gif|webp)$/i.test(
+                item.url.toLowerCase().split("?")[0],
+              ) && (
+                <div className="mt-2 rounded-lg overflow-hidden border border-[oklch(0.25_0.02_91.7)] max-w-xs">
+                  <img
+                    src={item.url}
+                    alt={item.title}
+                    className="w-full h-auto max-h-48 object-contain bg-[oklch(0.1_0_0)]"
+                  />
+                </div>
+              )}
+
             {/* PDF / Worksheet — View + Download buttons */}
             {item.url && isFileType && (
               <div className="flex items-center gap-2 mt-2 flex-wrap">
@@ -155,9 +183,7 @@ export default function ContentList({
                   data-ocid="class.content.view_button"
                   size="sm"
                   variant="outline"
-                  onClick={() =>
-                    window.open(item.url!, "_blank", "noopener,noreferrer")
-                  }
+                  onClick={() => openFile(item.url!)}
                   className="h-7 px-2.5 text-xs border-[oklch(0.3_0.02_91.7)] text-primary hover:text-gold-light hover:border-primary/50 hover:bg-primary/10 font-body transition-all"
                 >
                   <Eye className="h-3 w-3 mr-1" />

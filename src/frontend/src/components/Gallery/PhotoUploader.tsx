@@ -30,7 +30,14 @@ export default function PhotoUploader({
   const { uploadFile } = useFileUpload();
 
   const handleFile = async (file: File) => {
-    if (!file.type.startsWith("image/")) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Sirf image files allowed hain (JPG, PNG, GIF, WebP).");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("File size 10MB se kam honi chahiye.");
+      return;
+    }
 
     // Show local preview immediately
     const localPreview = URL.createObjectURL(file);
@@ -42,13 +49,18 @@ export default function PhotoUploader({
 
     try {
       const cdnUrl = await uploadFile(file, (pct) => setUploadProgress(pct));
+      if (!cdnUrl || cdnUrl.trim() === "") {
+        throw new Error("CDN URL empty returned");
+      }
       setImageUrl(cdnUrl);
+      toast.success("Photo successfully upload ho gaya!");
     } catch (err) {
       console.error("Photo upload failed:", err);
-      toast.error("Photo upload failed. Please try again.");
+      toast.error("Photo upload nahi ho saka. Dobara try karein.");
       // Revert preview on error
       URL.revokeObjectURL(localPreview);
       setPreviewUrl("");
+      setImageUrl("");
     } finally {
       setIsUploading(false);
     }

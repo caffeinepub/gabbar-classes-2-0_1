@@ -21,15 +21,40 @@ export type { StudentRecord, FeeDetail };
 export { ClassLevel, ContentType, UserRole };
 
 // ── Auth / Role ───────────────────────────────────────────────────────
-// Simple admin check: any logged-in user is treated as admin.
-// No backend call needed -- if identity exists, user is admin.
+// Real admin check: calls backend isCallerAdmin() to verify.
 export function useIsAdmin() {
+  const { actor, isFetching } = useActor();
   const { identity } = useInternetIdentity();
-  return {
-    data: !!identity,
-    isLoading: false,
-    isPending: false,
-  };
+  return useQuery<boolean>({
+    queryKey: ["isAdmin"],
+    queryFn: async () => {
+      if (!actor || !identity) return false;
+      try {
+        return await actor.isCallerAdmin();
+      } catch {
+        return false;
+      }
+    },
+    enabled: !!actor && !isFetching && !!identity,
+    staleTime: 1000 * 60 * 5,
+    refetchOnMount: true,
+  });
+}
+
+// Claims admin for the first logged-in user (no-op if already claimed).
+export function useClaimFirstAdmin() {
+  const { actor } = useActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      if (!actor) throw new Error("Not connected");
+      return actor.claimFirstAdmin();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["isAdmin"] });
+      qc.invalidateQueries({ queryKey: ["stats"] });
+    },
+  });
 }
 
 export function useUserRole() {
@@ -148,15 +173,20 @@ export function useAllGalleryItems() {
     queryFn: async () => {
       if (!actor) return [];
       try {
-        return await actor.getAllGalleryItems();
-      } catch {
+        const items = await actor.getAllGalleryItems();
+        return Array.isArray(items) ? items : [];
+      } catch (e) {
+        console.error("Gallery fetch error:", e);
         return [];
       }
     },
     enabled: !!actor && !isFetching,
     staleTime: 0,
+    gcTime: 1000 * 60 * 5,
     refetchOnMount: "always",
     refetchOnWindowFocus: true,
+    retry: 2,
+    retryDelay: 1500,
   });
 }
 
