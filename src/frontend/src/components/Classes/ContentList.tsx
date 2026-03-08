@@ -3,15 +3,20 @@ import { Button } from "@/components/ui/button";
 import { ContentType } from "@/hooks/useQueries";
 import {
   ClipboardList,
+  Download,
   ExternalLink,
+  Eye,
   FileText,
   FileX,
+  Loader2,
   MessageSquare,
   PenTool,
   Trash2,
   Video,
 } from "lucide-react";
 import { motion } from "motion/react";
+import { useState } from "react";
+import { toast } from "sonner";
 
 interface ContentListProps {
   items: ClassContent[];
@@ -36,6 +41,52 @@ const CONTENT_COLORS: Record<ContentType, string> = {
   [ContentType.test]: "text-purple-400",
 };
 
+function DownloadButton({ url, title }: { url: string; title: string }) {
+  const [downloading, setDownloading] = useState(false);
+
+  const handleDownload = async () => {
+    setDownloading(true);
+    try {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error("Failed to fetch file");
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = objectUrl;
+      anchor.download = title || "download";
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+      URL.revokeObjectURL(objectUrl);
+      toast.success("Download started!");
+    } catch {
+      // Fallback: open in new tab if fetch fails (e.g. CORS)
+      window.open(url, "_blank", "noopener,noreferrer");
+      toast.info("Opening file in new tab.");
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  return (
+    <Button
+      data-ocid="class.content.download_button"
+      size="sm"
+      variant="outline"
+      onClick={handleDownload}
+      disabled={downloading}
+      className="h-7 px-2.5 text-xs border-[oklch(0.3_0.02_91.7)] text-amber-400 hover:text-amber-300 hover:border-amber-400/50 hover:bg-amber-400/10 font-body transition-all"
+    >
+      {downloading ? (
+        <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+      ) : (
+        <Download className="h-3 w-3 mr-1" />
+      )}
+      {downloading ? "Downloading…" : "Download"}
+    </Button>
+  );
+}
+
 export default function ContentList({
   items,
   contentType,
@@ -44,6 +95,9 @@ export default function ContentList({
 }: ContentListProps) {
   const Icon = CONTENT_ICONS[contentType];
   const iconColor = CONTENT_COLORS[contentType];
+
+  const isFileType =
+    contentType === ContentType.pdf || contentType === ContentType.worksheet;
 
   if (items.length === 0) {
     return (
@@ -76,6 +130,7 @@ export default function ContentList({
           <div className="w-9 h-9 rounded-lg bg-[oklch(0.18_0_0)] flex items-center justify-center flex-shrink-0 mt-0.5">
             <Icon className={`h-4 w-4 ${iconColor}`} />
           </div>
+
           <div className="flex-1 min-w-0">
             <h4 className="text-foreground font-heading font-semibold text-sm truncate group-hover:text-primary transition-colors">
               {item.title}
@@ -85,32 +140,48 @@ export default function ContentList({
                 {item.description}
               </p>
             )}
+
+            {/* Message body — inline display */}
             {item.body && contentType === ContentType.message && (
               <p className="text-foreground/80 text-sm font-body mt-2 p-3 bg-[oklch(0.1_0_0)] rounded-lg border-l-2 border-primary/40">
                 {item.body}
               </p>
             )}
-            {item.url && (
+
+            {/* PDF / Worksheet — View + Download buttons */}
+            {item.url && isFileType && (
+              <div className="flex items-center gap-2 mt-2 flex-wrap">
+                <Button
+                  data-ocid="class.content.view_button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() =>
+                    window.open(item.url!, "_blank", "noopener,noreferrer")
+                  }
+                  className="h-7 px-2.5 text-xs border-[oklch(0.3_0.02_91.7)] text-primary hover:text-gold-light hover:border-primary/50 hover:bg-primary/10 font-body transition-all"
+                >
+                  <Eye className="h-3 w-3 mr-1" />
+                  View
+                </Button>
+                <DownloadButton url={item.url} title={item.title} />
+              </div>
+            )}
+
+            {/* Video / Test — single Open link */}
+            {item.url && !isFileType && contentType !== ContentType.message && (
               <a
                 href={item.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                download={
-                  contentType === ContentType.pdf ||
-                  contentType === ContentType.worksheet
-                    ? true
-                    : undefined
-                }
+                data-ocid="class.content.link"
                 className="inline-flex items-center gap-1 text-primary text-xs font-body mt-1.5 hover:text-gold-light transition-colors"
               >
                 <ExternalLink className="h-3 w-3" />
-                {contentType === ContentType.pdf ||
-                contentType === ContentType.worksheet
-                  ? "Download File"
-                  : "Open Resource"}
+                Open Resource
               </a>
             )}
           </div>
+
           {isAdmin && (
             <Button
               data-ocid={`class.content.delete_button.${i + 1}`}

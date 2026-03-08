@@ -65,6 +65,12 @@ export interface Faculty {
   'photoUrl' : string,
   'qualification' : string,
 }
+export interface FeeDetail {
+  'status' : string,
+  'dueDate' : string,
+  'totalFee' : bigint,
+  'paidFee' : bigint,
+}
 export interface GalleryItem {
   'id' : string,
   'title' : string,
@@ -77,7 +83,18 @@ export interface Stats {
   'contentCount' : bigint,
   'galleryCount' : bigint,
   'inquiryCount' : bigint,
+  'studentCount' : bigint,
   'batchCount' : bigint,
+}
+export interface StudentRecord {
+  'id' : string,
+  'studentName' : string,
+  'createdAt' : bigint,
+  'fatherName' : string,
+  'feeDetail' : FeeDetail,
+  'classLevel' : ClassLevel,
+  'mobile' : string,
+  'rollNo' : string,
 }
 export interface UserProfile {
   'enrolledClasses' : Array<string>,
@@ -119,17 +136,20 @@ export interface _SERVICE {
   'addClassContent' : ActorMethod<[ClassContent], undefined>,
   'addFaculty' : ActorMethod<[Faculty], undefined>,
   'addGalleryItem' : ActorMethod<[GalleryItem], undefined>,
+  'addStudentRecord' : ActorMethod<[StudentRecord], undefined>,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
   'claimFirstAdmin' : ActorMethod<[], boolean>,
   'deleteBatch' : ActorMethod<[string], undefined>,
   'deleteClassContent' : ActorMethod<[string], undefined>,
   'deleteFaculty' : ActorMethod<[string], undefined>,
   'deleteGalleryItem' : ActorMethod<[string], undefined>,
+  'deleteStudentRecord' : ActorMethod<[string], undefined>,
   'getActiveBatches' : ActorMethod<[], Array<Batch>>,
   'getAllAdmissionInquiries' : ActorMethod<[], Array<AdmissionInquiry>>,
   'getAllBatches' : ActorMethod<[], Array<Batch>>,
   'getAllFaculty' : ActorMethod<[], Array<Faculty>>,
   'getAllGalleryItems' : ActorMethod<[], Array<GalleryItem>>,
+  'getAllStudents' : ActorMethod<[], Array<StudentRecord>>,
   'getByClass' : ActorMethod<[ClassLevel], Array<ClassContent>>,
   'getByClassAndType' : ActorMethod<
     [ClassLevel, ContentType],
@@ -138,6 +158,8 @@ export interface _SERVICE {
   'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
   'getCallerUserRole' : ActorMethod<[], UserRole>,
   'getStats' : ActorMethod<[], Stats>,
+  'getStudentCountByClass' : ActorMethod<[ClassLevel], bigint>,
+  'getStudentsByClass' : ActorMethod<[ClassLevel], Array<StudentRecord>>,
   'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
   'markInquiryAsRead' : ActorMethod<[string], undefined>,
@@ -146,6 +168,7 @@ export interface _SERVICE {
   'updateBatch' : ActorMethod<[string, Batch], undefined>,
   'updateClassContent' : ActorMethod<[string, ClassContent], undefined>,
   'updateFaculty' : ActorMethod<[string, Faculty], undefined>,
+  'updateStudentRecord' : ActorMethod<[string, StudentRecord], undefined>,
 }
 export declare const idlService: IDL.ServiceClass;
 export declare const idlInitArgs: IDL.Type[];

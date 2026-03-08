@@ -65,7 +65,6 @@ export default function GalleryGrid({
               alt={item.title || item.caption}
               className="w-full object-cover"
               loading="lazy"
-              crossOrigin="anonymous"
               onError={() => handleImageError(item.id)}
             />
           ) : (

@@ -75,6 +75,22 @@ export const GalleryItem = IDL.Record({
   'caption' : IDL.Text,
   'uploadedAt' : IDL.Int,
 });
+export const FeeDetail = IDL.Record({
+  'status' : IDL.Text,
+  'dueDate' : IDL.Text,
+  'totalFee' : IDL.Nat,
+  'paidFee' : IDL.Nat,
+});
+export const StudentRecord = IDL.Record({
+  'id' : IDL.Text,
+  'studentName' : IDL.Text,
+  'createdAt' : IDL.Int,
+  'fatherName' : IDL.Text,
+  'feeDetail' : FeeDetail,
+  'classLevel' : ClassLevel,
+  'mobile' : IDL.Text,
+  'rollNo' : IDL.Text,
+});
 export const UserRole = IDL.Variant({
   'admin' : IDL.Null,
   'user' : IDL.Null,
@@ -100,6 +116,7 @@ export const Stats = IDL.Record({
   'contentCount' : IDL.Nat,
   'galleryCount' : IDL.Nat,
   'inquiryCount' : IDL.Nat,
+  'studentCount' : IDL.Nat,
   'batchCount' : IDL.Nat,
 });
 
@@ -135,12 +152,14 @@ export const idlService = IDL.Service({
   'addClassContent' : IDL.Func([ClassContent], [], []),
   'addFaculty' : IDL.Func([Faculty], [], []),
   'addGalleryItem' : IDL.Func([GalleryItem], [], []),
+  'addStudentRecord' : IDL.Func([StudentRecord], [], []),
   'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
   'claimFirstAdmin' : IDL.Func([], [IDL.Bool], []),
   'deleteBatch' : IDL.Func([IDL.Text], [], []),
   'deleteClassContent' : IDL.Func([IDL.Text], [], []),
   'deleteFaculty' : IDL.Func([IDL.Text], [], []),
   'deleteGalleryItem' : IDL.Func([IDL.Text], [], []),
+  'deleteStudentRecord' : IDL.Func([IDL.Text], [], []),
   'getActiveBatches' : IDL.Func([], [IDL.Vec(Batch)], ['query']),
   'getAllAdmissionInquiries' : IDL.Func(
       [],
@@ -150,6 +169,7 @@ export const idlService = IDL.Service({
   'getAllBatches' : IDL.Func([], [IDL.Vec(Batch)], ['query']),
   'getAllFaculty' : IDL.Func([], [IDL.Vec(Faculty)], ['query']),
   'getAllGalleryItems' : IDL.Func([], [IDL.Vec(GalleryItem)], ['query']),
+  'getAllStudents' : IDL.Func([], [IDL.Vec(StudentRecord)], ['query']),
   'getByClass' : IDL.Func([ClassLevel], [IDL.Vec(ClassContent)], ['query']),
   'getByClassAndType' : IDL.Func(
       [ClassLevel, ContentType],
@@ -159,6 +179,12 @@ export const idlService = IDL.Service({
   'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
   'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
   'getStats' : IDL.Func([], [Stats], ['query']),
+  'getStudentCountByClass' : IDL.Func([ClassLevel], [IDL.Nat], ['query']),
+  'getStudentsByClass' : IDL.Func(
+      [ClassLevel],
+      [IDL.Vec(StudentRecord)],
+      ['query'],
+    ),
   'getUserProfile' : IDL.Func(
       [IDL.Principal],
       [IDL.Opt(UserProfile)],
@@ -171,6 +197,7 @@ export const idlService = IDL.Service({
   'updateBatch' : IDL.Func([IDL.Text, Batch], [], []),
   'updateClassContent' : IDL.Func([IDL.Text, ClassContent], [], []),
   'updateFaculty' : IDL.Func([IDL.Text, Faculty], [], []),
+  'updateStudentRecord' : IDL.Func([IDL.Text, StudentRecord], [], []),
 });
 
 export const idlInitArgs = [];
@@ -243,6 +270,22 @@ export const idlFactory = ({ IDL }) => {
     'caption' : IDL.Text,
     'uploadedAt' : IDL.Int,
   });
+  const FeeDetail = IDL.Record({
+    'status' : IDL.Text,
+    'dueDate' : IDL.Text,
+    'totalFee' : IDL.Nat,
+    'paidFee' : IDL.Nat,
+  });
+  const StudentRecord = IDL.Record({
+    'id' : IDL.Text,
+    'studentName' : IDL.Text,
+    'createdAt' : IDL.Int,
+    'fatherName' : IDL.Text,
+    'feeDetail' : FeeDetail,
+    'classLevel' : ClassLevel,
+    'mobile' : IDL.Text,
+    'rollNo' : IDL.Text,
+  });
   const UserRole = IDL.Variant({
     'admin' : IDL.Null,
     'user' : IDL.Null,
@@ -268,6 +311,7 @@ export const idlFactory = ({ IDL }) => {
     'contentCount' : IDL.Nat,
     'galleryCount' : IDL.Nat,
     'inquiryCount' : IDL.Nat,
+    'studentCount' : IDL.Nat,
     'batchCount' : IDL.Nat,
   });
   
@@ -303,12 +347,14 @@ export const idlFactory = ({ IDL }) => {
     'addClassContent' : IDL.Func([ClassContent], [], []),
     'addFaculty' : IDL.Func([Faculty], [], []),
     'addGalleryItem' : IDL.Func([GalleryItem], [], []),
+    'addStudentRecord' : IDL.Func([StudentRecord], [], []),
     'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
     'claimFirstAdmin' : IDL.Func([], [IDL.Bool], []),
     'deleteBatch' : IDL.Func([IDL.Text], [], []),
     'deleteClassContent' : IDL.Func([IDL.Text], [], []),
     'deleteFaculty' : IDL.Func([IDL.Text], [], []),
     'deleteGalleryItem' : IDL.Func([IDL.Text], [], []),
+    'deleteStudentRecord' : IDL.Func([IDL.Text], [], []),
     'getActiveBatches' : IDL.Func([], [IDL.Vec(Batch)], ['query']),
     'getAllAdmissionInquiries' : IDL.Func(
         [],
@@ -318,6 +364,7 @@ export const idlFactory = ({ IDL }) => {
     'getAllBatches' : IDL.Func([], [IDL.Vec(Batch)], ['query']),
     'getAllFaculty' : IDL.Func([], [IDL.Vec(Faculty)], ['query']),
     'getAllGalleryItems' : IDL.Func([], [IDL.Vec(GalleryItem)], ['query']),
+    'getAllStudents' : IDL.Func([], [IDL.Vec(StudentRecord)], ['query']),
     'getByClass' : IDL.Func([ClassLevel], [IDL.Vec(ClassContent)], ['query']),
     'getByClassAndType' : IDL.Func(
         [ClassLevel, ContentType],
@@ -327,6 +374,12 @@ export const idlFactory = ({ IDL }) => {
     'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
     'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
     'getStats' : IDL.Func([], [Stats], ['query']),
+    'getStudentCountByClass' : IDL.Func([ClassLevel], [IDL.Nat], ['query']),
+    'getStudentsByClass' : IDL.Func(
+        [ClassLevel],
+        [IDL.Vec(StudentRecord)],
+        ['query'],
+      ),
     'getUserProfile' : IDL.Func(
         [IDL.Principal],
         [IDL.Opt(UserProfile)],
@@ -339,6 +392,7 @@ export const idlFactory = ({ IDL }) => {
     'updateBatch' : IDL.Func([IDL.Text, Batch], [], []),
     'updateClassContent' : IDL.Func([IDL.Text, ClassContent], [], []),
     'updateFaculty' : IDL.Func([IDL.Text, Faculty], [], []),
+    'updateStudentRecord' : IDL.Func([IDL.Text, StudentRecord], [], []),
   });
 };
 

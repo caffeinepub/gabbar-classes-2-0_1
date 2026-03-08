@@ -17,6 +17,7 @@ import {
   MessageSquare,
   Shield,
   Users,
+  Users2,
 } from "lucide-react";
 import { motion } from "motion/react";
 import { useEffect, useState } from "react";
@@ -222,6 +223,13 @@ export default function AdminPage() {
       color: "text-purple-400",
       bg: "bg-purple-950/30",
     },
+    {
+      label: "Total Students",
+      value: stats ? Number(stats.studentCount) : "—",
+      icon: GraduationCap,
+      color: "text-cyan-400",
+      bg: "bg-cyan-950/30",
+    },
   ];
 
   const QUICK_LINKS = [
@@ -255,6 +263,12 @@ export default function AdminPage() {
       icon: GraduationCap,
       ocid: "admin.library.link",
     },
+    {
+      label: "Manage Students",
+      path: "/admin/students",
+      icon: Users2,
+      ocid: "admin.students.link",
+    },
   ];
 
   return (
@@ -281,7 +295,7 @@ export default function AdminPage() {
         </motion.div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-12">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-12">
           {STAT_CARDS.map((stat, i) => (
             <motion.div
               key={stat.label}

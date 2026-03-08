@@ -10,7 +10,6 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useActor } from "@/hooks/useActor";
 import {
   useAddGalleryItem,
   useAllGalleryItems,
@@ -27,7 +26,6 @@ function generateId() {
 }
 
 export default function GalleryPage() {
-  const { isFetching: actorFetching } = useActor();
   const {
     data: items = [],
     isLoading,
@@ -74,7 +72,7 @@ export default function GalleryPage() {
     toast.success("Gallery refreshed!");
   };
 
-  const showLoading = actorFetching || isLoading;
+  const showLoading = isLoading;
 
   return (
     <main className="min-h-screen pt-24 pb-16">

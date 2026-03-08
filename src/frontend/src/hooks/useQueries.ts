@@ -6,12 +6,16 @@ import {
   ClassLevel,
   ContentType,
   type Faculty,
+  type FeeDetail,
   type GalleryItem,
   type Stats,
+  type StudentRecord,
   type UserProfile,
   UserRole,
 } from "../backend.d";
 import { useActor } from "./useActor";
+
+export type { StudentRecord, FeeDetail };
 
 export { ClassLevel, ContentType, UserRole };
 
@@ -72,6 +76,7 @@ export function useStats() {
           galleryCount: 0n,
           inquiryCount: 0n,
           batchCount: 0n,
+          studentCount: 0n,
         };
       return actor.getStats();
     },
@@ -86,11 +91,15 @@ export function useAllFaculty() {
     queryKey: ["faculty"],
     queryFn: async () => {
       if (!actor) return [];
-      return actor.getAllFaculty();
+      try {
+        return await actor.getAllFaculty();
+      } catch {
+        return [];
+      }
     },
-    enabled: !!actor && !isFetching,
+    enabled: !isFetching,
     staleTime: 0,
-    refetchOnMount: true,
+    refetchOnMount: "always",
     refetchOnWindowFocus: true,
   });
 }
@@ -144,11 +153,15 @@ export function useAllGalleryItems() {
     queryKey: ["gallery"],
     queryFn: async () => {
       if (!actor) return [];
-      return actor.getAllGalleryItems();
+      try {
+        return await actor.getAllGalleryItems();
+      } catch {
+        return [];
+      }
     },
-    enabled: !!actor && !isFetching,
+    enabled: !isFetching,
     staleTime: 0,
-    refetchOnMount: true,
+    refetchOnMount: "always",
     refetchOnWindowFocus: true,
   });
 }
@@ -190,11 +203,15 @@ export function useClassContent(classLevel: ClassLevel) {
     queryKey: ["classContent", classLevel],
     queryFn: async () => {
       if (!actor) return [];
-      return actor.getByClass(classLevel);
+      try {
+        return await actor.getByClass(classLevel);
+      } catch {
+        return [];
+      }
     },
-    enabled: !!actor && !isFetching,
+    enabled: !isFetching,
     staleTime: 0,
-    refetchOnMount: true,
+    refetchOnMount: "always",
     refetchOnWindowFocus: true,
   });
 }
@@ -208,11 +225,15 @@ export function useClassContentByType(
     queryKey: ["classContent", classLevel, contentType],
     queryFn: async () => {
       if (!actor) return [];
-      return actor.getByClassAndType(classLevel, contentType);
+      try {
+        return await actor.getByClassAndType(classLevel, contentType);
+      } catch {
+        return [];
+      }
     },
-    enabled: !!actor && !isFetching,
+    enabled: !isFetching,
     staleTime: 0,
-    refetchOnMount: true,
+    refetchOnMount: "always",
     refetchOnWindowFocus: true,
   });
 }
@@ -378,5 +399,100 @@ export function useSaveCallerProfile() {
       return actor.saveCallerUserProfile(profile);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["callerProfile"] }),
+  });
+}
+
+// ── Student Records ───────────────────────────────────────────────────
+export function useStudentsByClass(classLevel: ClassLevel) {
+  const { actor, isFetching } = useActor();
+  return useQuery<StudentRecord[]>({
+    queryKey: ["students", classLevel],
+    queryFn: async () => {
+      if (!actor) return [];
+      try {
+        return await actor.getStudentsByClass(classLevel);
+      } catch {
+        return [];
+      }
+    },
+    enabled: !!actor && !isFetching,
+    staleTime: 0,
+    refetchOnMount: "always",
+  });
+}
+
+export function useStudentCountByClass(classLevel: ClassLevel) {
+  const { actor, isFetching } = useActor();
+  return useQuery<bigint>({
+    queryKey: ["studentCount", classLevel],
+    queryFn: async () => {
+      if (!actor) return 0n;
+      try {
+        return await actor.getStudentCountByClass(classLevel);
+      } catch {
+        return 0n;
+      }
+    },
+    enabled: !isFetching,
+    staleTime: 0,
+    refetchOnMount: "always",
+  });
+}
+
+export function useAddStudentRecord() {
+  const { actor } = useActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (record: StudentRecord) => {
+      if (!actor) throw new Error("Not connected");
+      return actor.addStudentRecord(record);
+    },
+    onSuccess: (_, variables) => {
+      qc.invalidateQueries({ queryKey: ["students", variables.classLevel] });
+      qc.invalidateQueries({
+        queryKey: ["studentCount", variables.classLevel],
+      });
+      qc.invalidateQueries({ queryKey: ["stats"] });
+    },
+  });
+}
+
+export function useUpdateStudentRecord() {
+  const { actor } = useActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: StudentRecord }) => {
+      if (!actor) throw new Error("Not connected");
+      return actor.updateStudentRecord(id, data);
+    },
+    onSuccess: (_, variables) => {
+      qc.invalidateQueries({
+        queryKey: ["students", variables.data.classLevel],
+      });
+      qc.invalidateQueries({
+        queryKey: ["studentCount", variables.data.classLevel],
+      });
+    },
+  });
+}
+
+export function useDeleteStudentRecord() {
+  const { actor } = useActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      id,
+      classLevel: _classLevel,
+    }: { id: string; classLevel: ClassLevel }) => {
+      if (!actor) throw new Error("Not connected");
+      return actor.deleteStudentRecord(id);
+    },
+    onSuccess: (_, variables) => {
+      qc.invalidateQueries({ queryKey: ["students", variables.classLevel] });
+      qc.invalidateQueries({
+        queryKey: ["studentCount", variables.classLevel],
+      });
+      qc.invalidateQueries({ queryKey: ["stats"] });
+    },
   });
 }

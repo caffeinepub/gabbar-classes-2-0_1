@@ -170,12 +170,31 @@ actor {
     isRead : Bool;
   };
 
+  public type FeeDetail = {
+    totalFee : Nat;
+    paidFee : Nat;
+    dueDate : Text;
+    status : Text; // "Paid"/"Partial"/"Pending"
+  };
+
+  public type StudentRecord = {
+    id : Text;
+    studentName : Text;
+    fatherName : Text;
+    mobile : Text;
+    classLevel : ClassLevel.ClassLevel;
+    rollNo : Text;
+    feeDetail : FeeDetail;
+    createdAt : Int;
+  };
+
   public type Stats = {
     facultyCount : Nat;
     galleryCount : Nat;
     contentCount : Nat;
     batchCount : Nat;
     inquiryCount : Nat;
+    studentCount : Nat;
   };
 
   // Comparison modules for sorting
@@ -200,6 +219,7 @@ actor {
   let classContent = Map.empty<Text, ClassContent>();
   let batches = Map.empty<Text, Batch>();
   let admissionInquiries = Map.empty<Text, AdmissionInquiry>();
+  let studentRecords = Map.empty<Text, StudentRecord>();
 
   // Helper function to check if student is enrolled in a class
   func isEnrolledInClass(caller : Principal, classLevel : ClassLevel.ClassLevel) : Bool {
@@ -335,27 +355,8 @@ actor {
     classContent.remove(id);
   };
 
-  // Students can read content for their enrolled classes, admins can read all
+  // Public access - anyone including guests can view class content
   public query ({ caller }) func getByClass(classLevel : ClassLevel.ClassLevel) : async [ClassContent] {
-    // Admins can access all content
-    if (AccessControl.isAdmin(accessControlState, caller)) {
-      let iter = classContent.values().filter(
-        func(item) {
-          item.classLevel == classLevel;
-        }
-      );
-      return iter.toArray();
-    };
-
-    // Students must be enrolled in the class
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only enrolled students can view class content");
-    };
-
-    if (not isEnrolledInClass(caller, classLevel)) {
-      Runtime.trap("Unauthorized: You are not enrolled in this class");
-    };
-
     let iter = classContent.values().filter(
       func(item) {
         item.classLevel == classLevel;
@@ -365,25 +366,6 @@ actor {
   };
 
   public query ({ caller }) func getByClassAndType(classLevel : ClassLevel.ClassLevel, contentType : ContentType.ContentType) : async [ClassContent] {
-    // Admins can access all content
-    if (AccessControl.isAdmin(accessControlState, caller)) {
-      let iter = classContent.values().filter(
-        func(item) {
-          item.classLevel == classLevel and item.contentType == contentType;
-        }
-      );
-      return iter.toArray();
-    };
-
-    // Students must be enrolled in the class
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only enrolled students can view class content");
-    };
-
-    if (not isEnrolledInClass(caller, classLevel)) {
-      Runtime.trap("Unauthorized: You are not enrolled in this class");
-    };
-
     let iter = classContent.values().filter(
       func(item) {
         item.classLevel == classLevel and item.contentType == contentType;
@@ -478,6 +460,79 @@ actor {
     };
   };
 
+  // Student Records - Admin only for mutations
+  public shared ({ caller }) func addStudentRecord(record : StudentRecord) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can add student records");
+    };
+    let id = generateId();
+    let newRecord = {
+      id;
+      studentName = record.studentName;
+      fatherName = record.fatherName;
+      mobile = record.mobile;
+      classLevel = record.classLevel;
+      rollNo = record.rollNo;
+      feeDetail = record.feeDetail;
+      createdAt = Time.now();
+    };
+    studentRecords.add(id, newRecord);
+  };
+
+  public shared ({ caller }) func updateStudentRecord(id : Text, updatedData : StudentRecord) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can update student records");
+    };
+    switch (studentRecords.get(id)) {
+      case (?_) {
+        let updatedRecord = { updatedData with id };
+        studentRecords.add(id, updatedRecord);
+      };
+      case (null) {
+        Runtime.trap("Student record not found");
+      };
+    };
+  };
+
+  public shared ({ caller }) func deleteStudentRecord(id : Text) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can delete student records");
+    };
+    if (not studentRecords.containsKey(id)) {
+      Runtime.trap("Student record not found");
+    };
+    studentRecords.remove(id);
+  };
+
+  public query ({ caller }) func getStudentsByClass(classLevel : ClassLevel.ClassLevel) : async [StudentRecord] {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can view student records");
+    };
+    let iter = studentRecords.values().filter(
+      func(record) {
+        record.classLevel == classLevel;
+      }
+    );
+    iter.toArray();
+  };
+
+  // Public - anyone can see student count for a class
+  public query ({ caller }) func getStudentCountByClass(classLevel : ClassLevel.ClassLevel) : async Nat {
+    let iter = studentRecords.values().filter(
+      func(record) {
+        record.classLevel == classLevel;
+      }
+    );
+    iter.toArray().size();
+  };
+
+  public query ({ caller }) func getAllStudents() : async [StudentRecord] {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can view all student records");
+    };
+    studentRecords.values().toArray();
+  };
+
   // Stats - Admin only
   public query ({ caller }) func getStats() : async Stats {
     if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
@@ -489,6 +544,7 @@ actor {
       contentCount = classContent.size();
       batchCount = batches.size();
       inquiryCount = admissionInquiries.size();
+      studentCount = studentRecords.size();
     };
   };
 

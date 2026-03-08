@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/sonner";
 import AboutPage from "@/pages/AboutPage";
 import AdminInquiriesPage from "@/pages/AdminInquiriesPage";
 import AdminPage from "@/pages/AdminPage";
+import AdminStudentsPage from "@/pages/AdminStudentsPage";
 import BatchesPage from "@/pages/BatchesPage";
 import ClassPage from "@/pages/ClassPage";
 import ContactPage from "@/pages/ContactPage";
@@ -110,6 +111,12 @@ const adminInquiriesRoute = createRoute({
   component: AdminInquiriesPage,
 });
 
+const adminStudentsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/admin/students",
+  component: AdminStudentsPage,
+});
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   aboutRoute,
@@ -122,6 +129,7 @@ const routeTree = rootRoute.addChildren([
   loginRoute,
   adminRoute,
   adminInquiriesRoute,
+  adminStudentsRoute,
 ]);
 
 const router = createRouter({ routeTree });
