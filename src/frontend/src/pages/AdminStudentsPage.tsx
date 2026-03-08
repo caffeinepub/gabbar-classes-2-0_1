@@ -418,7 +418,7 @@ function DeleteConfirmDialog({
 }
 
 export default function AdminStudentsPage() {
-  const { data: isAdmin, isLoading: adminLoading } = useIsAdmin();
+  const { data: isAdmin } = useIsAdmin();
   const [selectedClass, setSelectedClass] = useState<ClassLevel>(
     ClassLevel.Nursery,
   );
@@ -444,17 +444,6 @@ export default function AdminStudentsPage() {
       toast.error("Failed to delete student.");
     }
   };
-
-  if (adminLoading) {
-    return (
-      <main
-        className="min-h-screen pt-24 pb-16 flex items-center justify-center"
-        data-ocid="admin.students.loading_state"
-      >
-        <Loader2 className="h-10 w-10 text-primary/60 animate-spin" />
-      </main>
-    );
-  }
 
   if (!isAdmin) {
     return (

@@ -3,18 +3,10 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   useAllAdmissionInquiries,
-  useIsAdmin,
   useMarkInquiryAsRead,
 } from "@/hooks/useQueries";
 import { Link } from "@tanstack/react-router";
-import {
-  ArrowLeft,
-  Check,
-  Mail,
-  MessageSquare,
-  Phone,
-  Shield,
-} from "lucide-react";
+import { ArrowLeft, Check, Mail, MessageSquare, Phone } from "lucide-react";
 import { motion } from "motion/react";
 import { toast } from "sonner";
 
@@ -32,21 +24,7 @@ const CLASS_LABELS: Record<string, string> = {
 
 export default function AdminInquiriesPage() {
   const { data: inquiries = [], isLoading } = useAllAdmissionInquiries();
-  const { data: isAdmin } = useIsAdmin();
   const markRead = useMarkInquiryAsRead();
-
-  if (!isAdmin && isAdmin !== undefined) {
-    return (
-      <main className="min-h-screen pt-24 pb-16 flex items-center justify-center">
-        <div className="text-center">
-          <Shield className="h-16 w-16 text-primary/30 mx-auto mb-4" />
-          <h1 className="text-2xl font-display font-bold text-muted-foreground">
-            Access Denied
-          </h1>
-        </div>
-      </main>
-    );
-  }
 
   const handleMarkRead = async (id: string) => {
     try {

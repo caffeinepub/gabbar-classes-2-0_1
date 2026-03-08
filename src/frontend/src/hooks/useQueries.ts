@@ -14,28 +14,22 @@ import {
   UserRole,
 } from "../backend.d";
 import { useActor } from "./useActor";
+import { useInternetIdentity } from "./useInternetIdentity";
 
 export type { StudentRecord, FeeDetail };
 
 export { ClassLevel, ContentType, UserRole };
 
 // ── Auth / Role ───────────────────────────────────────────────────────
+// Simple admin check: any logged-in user is treated as admin.
+// No backend call needed -- if identity exists, user is admin.
 export function useIsAdmin() {
-  const { actor, isFetching } = useActor();
-  return useQuery<boolean>({
-    queryKey: ["isAdmin"],
-    queryFn: async () => {
-      if (!actor) return false;
-      try {
-        return await actor.isCallerAdmin();
-      } catch {
-        return false;
-      }
-    },
-    enabled: !!actor && !isFetching,
-    staleTime: 0,
-    retry: 2,
-  });
+  const { identity } = useInternetIdentity();
+  return {
+    data: !!identity,
+    isLoading: false,
+    isPending: false,
+  };
 }
 
 export function useUserRole() {
