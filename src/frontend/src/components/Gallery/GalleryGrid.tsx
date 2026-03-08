@@ -39,7 +39,8 @@ export default function GalleryGrid({
         <ImageIcon className="h-12 w-12 text-primary/30 mx-auto mb-4" />
         <p className="text-muted-foreground font-body text-lg">No photos yet</p>
         <p className="text-muted-foreground/60 font-body text-sm mt-2">
-          Admin uploads photos here and they appear for everyone.
+          Admin uploads coaching centre photos here and they appear for everyone
+          permanently.
         </p>
       </div>
     );

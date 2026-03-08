@@ -29,25 +29,34 @@ export default function AdminPage() {
   const [isClaimingAdmin, setIsClaimingAdmin] = useState(false);
 
   // Auto-claim admin when actor is ready and user is logged in
+  // Hard timeout: if still claiming after 3s, show dashboard anyway
   useEffect(() => {
     if (actor && !actorFetching && identity && !claimAttemptedRef.current) {
       setIsClaimingAdmin(true);
+
+      // Safety fallback -- show dashboard after 3s no matter what
+      const fallbackTimer = setTimeout(() => {
+        setIsClaimingAdmin(false);
+        claimAttemptedRef.current = true;
+      }, 3000);
+
       actor
         .claimFirstAdmin()
         .then(() => {
-          // Only mark as attempted after the call succeeds so remounts can retry
           claimAttemptedRef.current = true;
           qc.invalidateQueries({ queryKey: ["isAdmin"] });
           qc.invalidateQueries({ queryKey: ["stats"] });
         })
         .catch(() => {
-          // Ignore -- may already be claimed by someone else; mark attempted so
-          // we don't spam the backend with retries in the same session
+          // Ignore -- may already be claimed; mark attempted to avoid retries
           claimAttemptedRef.current = true;
         })
         .finally(() => {
+          clearTimeout(fallbackTimer);
           setIsClaimingAdmin(false);
         });
+
+      return () => clearTimeout(fallbackTimer);
     }
   }, [actor, actorFetching, identity, qc]);
 
@@ -164,7 +173,7 @@ export default function AdminPage() {
       ocid: "admin.faculty.link",
     },
     {
-      label: "Manage Gallery",
+      label: "Manage Photos",
       path: "/gallery",
       icon: Images,
       ocid: "admin.gallery.link",

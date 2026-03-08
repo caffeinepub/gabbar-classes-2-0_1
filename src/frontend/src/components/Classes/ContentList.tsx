@@ -41,18 +41,51 @@ const CONTENT_COLORS: Record<ContentType, string> = {
   [ContentType.test]: "text-purple-400",
 };
 
+/**
+ * Extract Google Drive file ID from a share link.
+ * Handles patterns like:
+ *   https://drive.google.com/file/d/FILE_ID/view
+ *   https://drive.google.com/open?id=FILE_ID
+ *   https://drive.google.com/uc?id=FILE_ID
+ */
+function extractDriveFileId(url: string): string | null {
+  // Pattern: /file/d/{id}/
+  const fileMatch = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+  if (fileMatch) return fileMatch[1];
+
+  // Pattern: ?id={id} or &id={id}
+  const idMatch = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  if (idMatch) return idMatch[1];
+
+  return null;
+}
+
+function isDriveUrl(url: string): boolean {
+  return url.includes("drive.google.com");
+}
+
 const openFile = (url: string) => {
+  // Handle Google Drive links
+  if (isDriveUrl(url)) {
+    const fileId = extractDriveFileId(url);
+    if (fileId) {
+      // Use the preview URL for embedded view
+      const previewUrl = `https://drive.google.com/file/d/${fileId}/preview`;
+      window.open(previewUrl, "_blank", "noopener,noreferrer");
+    } else {
+      // Fallback: open the Drive URL directly
+      window.open(url, "_blank", "noopener,noreferrer");
+    }
+    return;
+  }
+
   const lower = url.toLowerCase().split("?")[0];
   const isImage = /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(lower);
-  const isPdf = /\.pdf$/i.test(lower);
 
   if (isImage) {
     window.open(url, "_blank", "noopener,noreferrer");
-  } else if (isPdf) {
-    const viewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(url)}`;
-    window.open(viewerUrl, "_blank", "noopener,noreferrer");
   } else {
-    // Doc/Docx and other files — use Google Docs viewer
+    // PDF, Doc, Docx and other files — use Google Docs viewer
     const viewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(url)}`;
     window.open(viewerUrl, "_blank", "noopener,noreferrer");
   }
@@ -61,21 +94,47 @@ const openFile = (url: string) => {
 function DownloadButton({ url, title }: { url: string; title: string }) {
   const [downloading, setDownloading] = useState(false);
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     setDownloading(true);
+
+    // For Google Drive links, use the direct download URL
+    if (isDriveUrl(url)) {
+      const fileId = extractDriveFileId(url);
+      if (fileId) {
+        const downloadUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
+        window.open(downloadUrl, "_blank", "noopener,noreferrer");
+        toast.success("Download shuru ho gaya! Files mein dekhen.");
+      } else {
+        window.open(url, "_blank", "noopener,noreferrer");
+        toast.info("File new tab mein khul gayi.");
+      }
+      setDownloading(false);
+      return;
+    }
+
     try {
+      // Try fetch + blob for proper file download (saves to device files/gallery)
+      const response = await fetch(url, { mode: "cors" });
+      if (!response.ok) throw new Error("fetch failed");
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
       const anchor = document.createElement("a");
-      anchor.href = url;
-      anchor.download = title || "download";
-      anchor.target = "_blank";
-      anchor.rel = "noopener noreferrer";
+      anchor.href = blobUrl;
+      // Determine filename from URL or use title
+      const urlParts = url.split("/");
+      const rawFilename = urlParts[urlParts.length - 1].split("?")[0];
+      anchor.download = rawFilename || title || "download";
       document.body.appendChild(anchor);
       anchor.click();
       document.body.removeChild(anchor);
-      toast.success("Download starting...");
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+      toast.success("Download ho gaya! Files mein dekhen.");
     } catch {
+      // Fallback: open in new tab (user can long-press to save)
       window.open(url, "_blank", "noopener,noreferrer");
-      toast.info("Opening file in new tab.");
+      toast.info(
+        "File new tab mein khul gayi. Save karne ke liye long-press karein.",
+      );
     } finally {
       setDownloading(false);
     }
@@ -161,9 +220,10 @@ export default function ContentList({
               </p>
             )}
 
-            {/* Image thumbnail preview if content is an image file */}
+            {/* Image thumbnail preview if content is an image file (non-Drive) */}
             {item.url &&
               isFileType &&
+              !isDriveUrl(item.url) &&
               /\.(jpg|jpeg|png|gif|webp)$/i.test(
                 item.url.toLowerCase().split("?")[0],
               ) && (
@@ -190,6 +250,11 @@ export default function ContentList({
                   View
                 </Button>
                 <DownloadButton url={item.url} title={item.title} />
+                {isDriveUrl(item.url) && (
+                  <span className="text-emerald-500/70 text-xs font-body flex items-center gap-1">
+                    Google Drive
+                  </span>
+                )}
               </div>
             )}
 

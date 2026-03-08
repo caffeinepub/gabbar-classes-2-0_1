@@ -5,15 +5,18 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useActor } from "@/hooks/useActor";
 import { useIsAdmin } from "@/hooks/useQueries";
 import { useQueryClient } from "@tanstack/react-query";
-import { Loader2, Plus, RefreshCw } from "lucide-react";
+import { HardDrive, Loader2, Plus, RefreshCw } from "lucide-react";
 import { motion } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -32,6 +35,10 @@ export default function GalleryPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [driveDialogOpen, setDriveDialogOpen] = useState(false);
+  const [driveLinkInput, setDriveLinkInput] = useState("");
+  const [driveTitleInput, setDriveTitleInput] = useState("");
+  const [isDriveSaving, setIsDriveSaving] = useState(false);
   const hasFetchedRef = useRef(false);
 
   // Fetch gallery directly from actor -- no React Query cache issues
@@ -59,8 +66,7 @@ export default function GalleryPage() {
     [actor],
   );
 
-  // Fetch when actor becomes ready -- getAllGalleryItems is a public query
-  // so any ready actor (authenticated or anonymous) can call it
+  // Fetch when actor becomes ready
   useEffect(() => {
     if (actor && !actorFetching) {
       fetchGallery(false);
@@ -74,70 +80,86 @@ export default function GalleryPage() {
     }
   }, [actorFetching]);
 
-  const handleUpload = async (data: {
+  const saveGalleryItem = async (data: {
     title: string;
     caption: string;
     imageUrl: string;
   }) => {
     if (!actor) {
       toast.error("Please login karein pehle.");
-      return;
+      return false;
     }
     if (!data.imageUrl) {
-      toast.error("Pehle photo upload karein.");
-      return;
+      toast.error("Pehle photo/link add karein.");
+      return false;
     }
 
-    setIsSaving(true);
+    const item: GalleryItem = {
+      id: generateId(),
+      title: data.title,
+      caption: data.caption,
+      imageUrl: data.imageUrl,
+      uploadedAt: BigInt(Date.now()),
+    };
+
+    // Ensure admin rights before saving
     try {
-      // Step 1: Try to claim admin (no-op if already admin or slot taken by another)
-      try {
-        await actor.claimFirstAdmin();
-      } catch {
-        // Ignore -- may already be claimed
-      }
+      await actor.claimFirstAdmin();
+    } catch {
+      // Ignore -- may already be set or silently skip
+    }
 
-      // Step 2: Verify admin access before proceeding
-      const isAdmin = await actor.isCallerAdmin();
-      if (!isAdmin) {
-        throw new Error("Unauthorized: Only admins can add gallery items");
-      }
-
-      // Step 3: Save the gallery item
-      const item: GalleryItem = {
-        id: generateId(),
-        title: data.title,
-        caption: data.caption,
-        imageUrl: data.imageUrl,
-        uploadedAt: BigInt(Date.now()),
-      };
+    try {
       await actor.addGalleryItem(item);
 
-      // Step 4: Optimistically add to local state immediately
+      // Optimistically add to local state immediately
       setItems((prev) => [item, ...prev]);
 
-      toast.success("Photo gallery mein save ho gaya!");
-      setDialogOpen(false);
+      toast.success("Photo save ho gaya!");
 
-      // Step 5: Invalidate React Query caches
       qc.invalidateQueries({ queryKey: ["gallery"] });
       qc.invalidateQueries({ queryKey: ["stats"] });
 
-      // Step 6: Double re-fetch to ensure backend persistence is confirmed
-      setTimeout(() => fetchGallery(false), 1000);
-      setTimeout(() => fetchGallery(false), 3000);
+      // Re-fetch to confirm persistence at 500ms and 2000ms
+      setTimeout(() => fetchGallery(false), 500);
+      setTimeout(() => fetchGallery(false), 2000);
+      return true;
     } catch (err) {
-      const errMsg = String(err);
       console.error("Gallery save failed:", err);
-      if (errMsg.includes("Unauthorized") || errMsg.includes("Only admin")) {
-        toast.error(
-          "Admin access nahi mila. Admin page par jaayein aur dobara login karein.",
-        );
-      } else {
-        toast.error("Photo save nahi ho saka. Dobara try karein.");
-      }
-    } finally {
-      setIsSaving(false);
+      toast.error(
+        "Photo save nahi ho saka. Kripya pehle Admin page par jaayein aur wapas aayein.",
+      );
+      return false;
+    }
+  };
+
+  const handleUpload = async (data: {
+    title: string;
+    caption: string;
+    imageUrl: string;
+  }) => {
+    setIsSaving(true);
+    const ok = await saveGalleryItem(data);
+    setIsSaving(false);
+    if (ok) setDialogOpen(false);
+  };
+
+  const handleDriveSave = async () => {
+    if (!driveLinkInput.trim()) {
+      toast.error("Google Drive link daalen.");
+      return;
+    }
+    setIsDriveSaving(true);
+    const ok = await saveGalleryItem({
+      title: driveTitleInput.trim() || "Google Drive Photo",
+      caption: "",
+      imageUrl: driveLinkInput.trim(),
+    });
+    setIsDriveSaving(false);
+    if (ok) {
+      setDriveDialogOpen(false);
+      setDriveLinkInput("");
+      setDriveTitleInput("");
     }
   };
 
@@ -172,13 +194,13 @@ export default function GalleryPage() {
         >
           <div>
             <p className="text-primary/70 font-body text-sm tracking-widest uppercase mb-2">
-              Our Moments
+              Our Centre
             </p>
             <h1 className="text-4xl sm:text-5xl font-display font-bold text-gold-gradient section-heading">
-              Gallery
+              Photos
             </h1>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             {/* Refresh button */}
             <Button
               data-ocid="gallery.refresh.button"
@@ -197,24 +219,106 @@ export default function GalleryPage() {
             </Button>
 
             {isAdmin && (
-              <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button
-                    data-ocid="gallery.upload.upload_button"
-                    className="bg-primary text-primary-foreground hover:bg-gold-light font-heading font-semibold"
-                  >
-                    <Plus className="h-4 w-4 mr-2" /> Add Photo
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="bg-[oklch(0.13_0_0)] border-[oklch(0.3_0.02_91.7)] max-w-md">
-                  <DialogHeader>
-                    <DialogTitle className="text-gold-gradient font-display text-xl">
-                      Add Photo to Gallery
-                    </DialogTitle>
-                  </DialogHeader>
-                  <PhotoUploader onUpload={handleUpload} isLoading={isSaving} />
-                </DialogContent>
-              </Dialog>
+              <>
+                {/* Upload from device */}
+                <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button
+                      data-ocid="gallery.upload.upload_button"
+                      className="bg-primary text-primary-foreground hover:bg-gold-light font-heading font-semibold"
+                    >
+                      <Plus className="h-4 w-4 mr-2" /> Add Photo
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="bg-[oklch(0.13_0_0)] border-[oklch(0.3_0.02_91.7)] max-w-md">
+                    <DialogHeader>
+                      <DialogTitle className="text-gold-gradient font-display text-xl">
+                        Add Coaching Centre Photo
+                      </DialogTitle>
+                    </DialogHeader>
+                    <PhotoUploader
+                      onUpload={handleUpload}
+                      isLoading={isSaving}
+                    />
+                  </DialogContent>
+                </Dialog>
+
+                {/* Add via Google Drive link */}
+                <Dialog
+                  open={driveDialogOpen}
+                  onOpenChange={setDriveDialogOpen}
+                >
+                  <DialogTrigger asChild>
+                    <Button
+                      data-ocid="gallery.drive_link.open_modal_button"
+                      variant="outline"
+                      className="border-emerald-600/60 text-emerald-400 hover:bg-emerald-950/40 hover:border-emerald-500 hover:text-emerald-300 font-heading font-semibold"
+                    >
+                      <HardDrive className="h-4 w-4 mr-2" /> Google Drive Link
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="bg-[oklch(0.13_0_0)] border-[oklch(0.3_0.02_91.7)] max-w-md">
+                    <DialogHeader>
+                      <DialogTitle className="text-gold-gradient font-display text-xl">
+                        Google Drive se Photo Add Karein
+                      </DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 py-2">
+                      <div>
+                        <Label className="text-foreground text-sm font-body mb-1 block">
+                          Photo Title
+                        </Label>
+                        <Input
+                          data-ocid="gallery.drive_link.input"
+                          value={driveTitleInput}
+                          onChange={(e) => setDriveTitleInput(e.target.value)}
+                          placeholder="e.g. Classroom Photo, Event 2024"
+                          className="bg-[oklch(0.1_0_0)] border-[oklch(0.3_0.02_91.7)] focus:border-primary text-foreground placeholder:text-muted-foreground"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-foreground text-sm font-body mb-1 block">
+                          Google Drive Link *
+                        </Label>
+                        <Input
+                          value={driveLinkInput}
+                          onChange={(e) => setDriveLinkInput(e.target.value)}
+                          placeholder="https://drive.google.com/..."
+                          className="bg-[oklch(0.1_0_0)] border-[oklch(0.3_0.02_91.7)] focus:border-primary text-foreground placeholder:text-muted-foreground"
+                        />
+                        <p className="text-muted-foreground/70 text-xs font-body mt-1.5">
+                          Google Drive mein file open karein → Share → "Anyone
+                          with the link" enable karein → link copy karein.
+                        </p>
+                      </div>
+                    </div>
+                    <DialogFooter className="gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => setDriveDialogOpen(false)}
+                        className="border-[oklch(0.3_0.02_91.7)] text-muted-foreground hover:text-foreground"
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        data-ocid="gallery.drive_link.save_button"
+                        onClick={handleDriveSave}
+                        disabled={isDriveSaving || !driveLinkInput.trim()}
+                        className="bg-emerald-700 hover:bg-emerald-600 text-white font-heading font-semibold"
+                      >
+                        {isDriveSaving ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Saving...
+                          </>
+                        ) : (
+                          "Save Photo"
+                        )}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </>
             )}
           </div>
         </motion.div>

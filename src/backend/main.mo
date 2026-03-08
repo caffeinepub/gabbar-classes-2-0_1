@@ -12,7 +12,9 @@ import Runtime "mo:core/Runtime";
 import AccessControl "authorization/access-control";
 import MixinAuthorization "authorization/MixinAuthorization";
 import MixinStorage "blob-storage/Mixin";
+import Migration "migration";
 
+(with migration = Migration.run)
 actor {
   // Initialize the access control system
   let accessControlState = AccessControl.initState();
@@ -206,7 +208,6 @@ actor {
 
   // Storage
   var nextId = 0;
-  var adminAssigned = false;
 
   func generateId() : Text {
     let id = nextId;
@@ -550,9 +551,8 @@ actor {
 
   public shared ({ caller }) func claimFirstAdmin() : async Bool {
     if (caller.isAnonymous()) { return false };
-    if (adminAssigned) { return false };
     accessControlState.userRoles.add(caller, #admin);
-    adminAssigned := true;
-    return true;
+    true;
   };
 };
+

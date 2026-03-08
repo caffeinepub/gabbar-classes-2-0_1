@@ -28,7 +28,7 @@ const NAV_LINKS = [
   { label: "About", path: "/about" },
   { label: "Faculty", path: "/faculty" },
   { label: "Library", path: "/library" },
-  { label: "Gallery", path: "/gallery" },
+  { label: "Photos", path: "/gallery" },
   { label: "Batches", path: "/batches" },
   { label: "Contact", path: "/contact" },
 ];

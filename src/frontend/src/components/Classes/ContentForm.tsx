@@ -12,7 +12,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useFileUpload } from "@/hooks/useFileUpload";
 import { ContentType } from "@/hooks/useQueries";
-import { FileUp, Loader2, Paperclip } from "lucide-react";
+import { FileUp, HardDrive, Loader2, Paperclip, Upload } from "lucide-react";
 import { useState } from "react";
 
 interface ContentFormProps {
@@ -25,6 +25,8 @@ interface ContentFormProps {
 function generateId() {
   return `content_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
 }
+
+type FileInputMode = "upload" | "drive";
 
 export default function ContentForm({
   classLevel,
@@ -45,6 +47,7 @@ export default function ContentForm({
   const [selectedFileName, setSelectedFileName] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [fileInputMode, setFileInputMode] = useState<FileInputMode>("upload");
 
   const { uploadFile } = useFileUpload();
 
@@ -57,6 +60,15 @@ export default function ContentForm({
 
   const handleContentTypeChange = (v: ContentType) => {
     setForm((prev) => ({ ...prev, contentType: v, url: "", body: "" }));
+    setSelectedFileName("");
+    setUploadProgress(0);
+    setFileInputMode("upload");
+  };
+
+  const handleFileModeChange = (mode: FileInputMode) => {
+    setFileInputMode(mode);
+    // Clear URL when switching modes
+    handleChange("url", "");
     setSelectedFileName("");
     setUploadProgress(0);
   };
@@ -139,75 +151,127 @@ export default function ContentForm({
         />
       </div>
 
-      {/* File upload for PDF / Worksheet — uses <label> for native accessibility */}
+      {/* File-based section for PDF / Worksheet */}
       {isFileBased && (
         <div>
-          <span className="block text-foreground text-sm font-body mb-1">
+          <span className="block text-foreground text-sm font-body mb-2">
             {form.contentType === ContentType.pdf
               ? "PDF File"
               : "Worksheet File"}
           </span>
-          <label
-            data-ocid="class.content.file.upload_button"
-            className={`
-              mt-1 cursor-pointer rounded-lg border-2 border-dashed transition-colors
-              flex items-center gap-3 px-4 py-3
-              ${
-                isUploading
-                  ? "border-primary bg-[oklch(0.12_0.03_91.7)] cursor-wait"
-                  : selectedFileName && form.url
-                    ? "border-primary bg-[oklch(0.12_0.03_91.7)]"
-                    : "border-[oklch(0.3_0.02_91.7)] bg-[oklch(0.1_0_0)] hover:border-primary hover:bg-[oklch(0.13_0.02_91.7)]"
-              }
-            `}
+
+          {/* Mode toggle: Upload vs Google Drive */}
+          <div
+            data-ocid="class.content.drive_link.toggle"
+            className="flex items-center gap-1 p-1 bg-[oklch(0.1_0_0)] rounded-lg border border-[oklch(0.25_0.02_91.7)] mb-3 w-fit"
           >
-            {isUploading ? (
-              <div className="flex items-center gap-3 w-full">
-                <Loader2 className="h-5 w-5 text-primary shrink-0 animate-spin" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-primary font-medium truncate">
-                    Uploading {selectedFileName}... {uploadProgress}%
-                  </p>
-                  <div className="mt-1 h-1 rounded-full bg-[oklch(0.2_0_0)] overflow-hidden">
-                    <div
-                      className="h-full bg-primary transition-all duration-300"
-                      style={{ width: `${uploadProgress}%` }}
-                    />
+            <button
+              type="button"
+              onClick={() => handleFileModeChange("upload")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-heading font-semibold transition-all ${
+                fileInputMode === "upload"
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Upload className="h-3 w-3" />
+              Upload File
+            </button>
+            <button
+              type="button"
+              onClick={() => handleFileModeChange("drive")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-heading font-semibold transition-all ${
+                fileInputMode === "drive"
+                  ? "bg-emerald-700 text-white shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <HardDrive className="h-3 w-3" />
+              Google Drive Link
+            </button>
+          </div>
+
+          {/* Upload from device */}
+          {fileInputMode === "upload" && (
+            <label
+              data-ocid="class.content.file.upload_button"
+              className={`
+                mt-1 cursor-pointer rounded-lg border-2 border-dashed transition-colors
+                flex items-center gap-3 px-4 py-3
+                ${
+                  isUploading
+                    ? "border-primary bg-[oklch(0.12_0.03_91.7)] cursor-wait"
+                    : selectedFileName && form.url
+                      ? "border-primary bg-[oklch(0.12_0.03_91.7)]"
+                      : "border-[oklch(0.3_0.02_91.7)] bg-[oklch(0.1_0_0)] hover:border-primary hover:bg-[oklch(0.13_0.02_91.7)]"
+                }
+              `}
+            >
+              {isUploading ? (
+                <div className="flex items-center gap-3 w-full">
+                  <Loader2 className="h-5 w-5 text-primary shrink-0 animate-spin" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-primary font-medium truncate">
+                      Uploading {selectedFileName}... {uploadProgress}%
+                    </p>
+                    <div className="mt-1 h-1 rounded-full bg-[oklch(0.2_0_0)] overflow-hidden">
+                      <div
+                        className="h-full bg-primary transition-all duration-300"
+                        style={{ width: `${uploadProgress}%` }}
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
-            ) : selectedFileName && form.url ? (
-              <>
-                <Paperclip className="h-5 w-5 text-primary shrink-0" />
-                <span className="text-sm text-foreground truncate">
-                  {selectedFileName}
-                </span>
-              </>
-            ) : (
-              <>
-                <FileUp className="h-5 w-5 text-muted-foreground shrink-0" />
-                <div>
-                  <p className="text-sm text-muted-foreground">
-                    <span className="text-primary font-medium">
-                      Click to choose file
-                    </span>{" "}
-                    from your device
-                  </p>
-                  <p className="text-xs text-muted-foreground/60">
-                    PDF, DOC, DOCX, JPG, PNG
-                  </p>
-                </div>
-              </>
-            )}
-            <input
-              type="file"
-              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-              onChange={handleFileChange}
-              className="sr-only"
-              aria-label="Upload file"
-              disabled={isUploading}
-            />
-          </label>
+              ) : selectedFileName && form.url ? (
+                <>
+                  <Paperclip className="h-5 w-5 text-primary shrink-0" />
+                  <span className="text-sm text-foreground truncate">
+                    {selectedFileName}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <FileUp className="h-5 w-5 text-muted-foreground shrink-0" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">
+                      <span className="text-primary font-medium">
+                        Click to choose file
+                      </span>{" "}
+                      from your device
+                    </p>
+                    <p className="text-xs text-muted-foreground/60">
+                      PDF, DOC, DOCX, JPG, PNG
+                    </p>
+                  </div>
+                </>
+              )}
+              <input
+                type="file"
+                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                onChange={handleFileChange}
+                className="sr-only"
+                aria-label="Upload file"
+                disabled={isUploading}
+              />
+            </label>
+          )}
+
+          {/* Google Drive link input */}
+          {fileInputMode === "drive" && (
+            <div className="space-y-2">
+              <Input
+                data-ocid="class.content.drive_link.input"
+                value={form.url}
+                onChange={(e) => handleChange("url", e.target.value)}
+                placeholder="https://drive.google.com/file/d/..."
+                className="bg-[oklch(0.1_0_0)] border-emerald-700/50 focus:border-emerald-500 text-foreground placeholder:text-muted-foreground"
+              />
+              <p className="text-muted-foreground/70 text-xs font-body">
+                Google Drive link paste karein. Make sure &quot;Anyone with the
+                link&quot; access is on.
+              </p>
+            </div>
+          )}
         </div>
       )}
 
