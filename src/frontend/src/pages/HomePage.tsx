@@ -1,4 +1,5 @@
 import HeroSection from "@/components/Home/HeroSection";
+import PhotoGrid from "@/components/Home/PhotoGrid";
 import QuickNavGrid from "@/components/Home/QuickNavGrid";
 import StatsBar from "@/components/Home/StatsBar";
 
@@ -8,6 +9,7 @@ export default function HomePage() {
       <HeroSection />
       <StatsBar />
       <QuickNavGrid />
+      <PhotoGrid />
     </main>
   );
 }

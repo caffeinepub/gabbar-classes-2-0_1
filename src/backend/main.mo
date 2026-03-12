@@ -12,9 +12,7 @@ import Runtime "mo:core/Runtime";
 import AccessControl "authorization/access-control";
 import MixinAuthorization "authorization/MixinAuthorization";
 import MixinStorage "blob-storage/Mixin";
-import Migration "migration";
 
-(with migration = Migration.run)
 actor {
   // Initialize the access control system
   let accessControlState = AccessControl.initState();
@@ -283,8 +281,8 @@ actor {
 
   // Gallery - Admin only for add/delete
   public shared ({ caller }) func addGalleryItem(item : GalleryItem) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
-      Runtime.trap("Unauthorized: Only admins can add gallery items");
+    if (caller.isAnonymous()) {
+      Runtime.trap("Unauthorized: Must be logged in to add gallery items");
     };
     let id = generateId();
     let newItem = {
@@ -555,4 +553,3 @@ actor {
     true;
   };
 };
-
