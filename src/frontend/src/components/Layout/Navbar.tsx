@@ -5,7 +5,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { useInternetIdentity } from "@/hooks/useInternetIdentity";
 import { Link, useLocation } from "@tanstack/react-router";
 import { ChevronDown, GraduationCap, Menu, Shield, X } from "lucide-react";
@@ -37,13 +36,9 @@ const NAV_LINKS = [
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { identity, login, clear } = useInternetIdentity();
-  const { isAdminAuthenticated } = useAdminAuth();
   const location = useLocation();
 
   const isActive = (path: string) => location.pathname === path;
-
-  // Show admin link ONLY when the user has entered the correct admin password
-  const showAdminLink = isAdminAuthenticated;
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-black-base/95 backdrop-blur-md border-b border-[oklch(0.25_0.02_91.7)]">
@@ -114,15 +109,14 @@ export default function Navbar() {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {showAdminLink && (
-              <Link
-                to="/admin"
-                data-ocid="nav.admin.link"
-                className="flex items-center gap-1 px-3 py-2 text-sm font-body text-primary/80 hover:text-primary rounded-md transition-colors"
-              >
-                <Shield className="h-3 w-3" /> Admin
-              </Link>
-            )}
+            {/* Admin link always visible — security is on the /admin page itself */}
+            <Link
+              to="/admin"
+              data-ocid="nav.admin.link"
+              className="flex items-center gap-1 px-3 py-2 text-sm font-body text-muted-foreground/60 hover:text-primary/80 rounded-md transition-colors"
+            >
+              <Shield className="h-3 w-3" /> Admin
+            </Link>
           </div>
 
           {/* Auth Button */}
@@ -205,16 +199,15 @@ export default function Navbar() {
                     ))}
                   </div>
                 </div>
-                {showAdminLink && (
-                  <Link
-                    to="/admin"
-                    data-ocid="nav.admin.link"
-                    onClick={() => setMobileOpen(false)}
-                    className="flex items-center gap-2 px-4 py-2.5 text-sm text-primary font-body"
-                  >
-                    <Shield className="h-4 w-4" /> Admin Panel
-                  </Link>
-                )}
+                {/* Admin link always visible in mobile menu */}
+                <Link
+                  to="/admin"
+                  data-ocid="nav.admin.link"
+                  onClick={() => setMobileOpen(false)}
+                  className="flex items-center gap-2 px-4 py-2.5 text-sm text-muted-foreground/60 hover:text-primary/80 font-body"
+                >
+                  <Shield className="h-4 w-4" /> Admin Panel
+                </Link>
                 <div className="px-4 pt-2">
                   {identity ? (
                     <Button

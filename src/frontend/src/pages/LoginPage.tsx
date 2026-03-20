@@ -5,7 +5,7 @@ import { useInternetIdentity } from "@/hooks/useInternetIdentity";
 import { useNavigate } from "@tanstack/react-router";
 import { Loader2, Shield, Smartphone } from "lucide-react";
 import { motion } from "motion/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { SiGoogle } from "react-icons/si";
 
 export default function LoginPage() {
@@ -20,9 +20,11 @@ export default function LoginPage() {
   );
 
   // Redirect to admin panel on successful login
-  if (isLoginSuccess) {
-    navigate({ to: "/admin" });
-  }
+  useEffect(() => {
+    if (isLoginSuccess) {
+      navigate({ to: "/admin" });
+    }
+  }, [isLoginSuccess, navigate]);
 
   const handleSendOtp = (e: React.FormEvent) => {
     e.preventDefault();

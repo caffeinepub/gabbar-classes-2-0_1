@@ -1,6 +1,7 @@
 import Footer from "@/components/Layout/Footer";
 import Navbar from "@/components/Layout/Navbar";
 import { Toaster } from "@/components/ui/sonner";
+import { AdminAuthProvider } from "@/contexts/AdminAuthContext";
 import AboutPage from "@/pages/AboutPage";
 import AdminInquiriesPage from "@/pages/AdminInquiriesPage";
 import AdminPage from "@/pages/AdminPage";
@@ -141,5 +142,9 @@ declare module "@tanstack/react-router" {
 }
 
 export default function App() {
-  return <RouterProvider router={router} />;
+  return (
+    <AdminAuthProvider>
+      <RouterProvider router={router} />
+    </AdminAuthProvider>
+  );
 }
