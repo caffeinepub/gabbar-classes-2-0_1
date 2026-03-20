@@ -5,6 +5,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { useInternetIdentity } from "@/hooks/useInternetIdentity";
 import { Link, useLocation } from "@tanstack/react-router";
 import { ChevronDown, GraduationCap, Menu, Shield, X } from "lucide-react";
@@ -36,9 +37,13 @@ const NAV_LINKS = [
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { identity, login, clear } = useInternetIdentity();
+  const { isAdminAuthenticated } = useAdminAuth();
   const location = useLocation();
 
   const isActive = (path: string) => location.pathname === path;
+
+  // Show admin link ONLY when the user has entered the correct admin password
+  const showAdminLink = isAdminAuthenticated;
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-black-base/95 backdrop-blur-md border-b border-[oklch(0.25_0.02_91.7)]">
@@ -109,7 +114,7 @@ export default function Navbar() {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {identity && (
+            {showAdminLink && (
               <Link
                 to="/admin"
                 data-ocid="nav.admin.link"
@@ -200,7 +205,7 @@ export default function Navbar() {
                     ))}
                   </div>
                 </div>
-                {identity && (
+                {showAdminLink && (
                   <Link
                     to="/admin"
                     data-ocid="nav.admin.link"

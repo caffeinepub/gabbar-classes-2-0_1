@@ -19,9 +19,9 @@ export default function LoginPage() {
     null,
   );
 
-  // Redirect on success
+  // Redirect to admin panel on successful login
   if (isLoginSuccess) {
-    navigate({ to: "/" });
+    navigate({ to: "/admin" });
   }
 
   const handleSendOtp = (e: React.FormEvent) => {

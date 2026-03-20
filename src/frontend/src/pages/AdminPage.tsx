@@ -1,8 +1,8 @@
 import { Button } from "@/components/ui/button";
-import { useActor } from "@/hooks/useActor";
-import { useInternetIdentity } from "@/hooks/useInternetIdentity";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { useStats } from "@/hooks/useQueries";
-import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import {
   CalendarDays,
@@ -10,116 +10,153 @@ import {
   FileText,
   GraduationCap,
   Images,
-  Loader2,
-  LogIn,
+  Lock,
   MessageSquare,
   Shield,
   Users,
   Users2,
 } from "lucide-react";
 import { motion } from "motion/react";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 
 export default function AdminPage() {
-  const { identity, login } = useInternetIdentity();
-  const { actor, isFetching: actorFetching } = useActor();
+  const { isAdminAuthenticated, login, logout, changePassword } =
+    useAdminAuth();
   const { data: stats, isLoading: statsLoading } = useStats();
-  const qc = useQueryClient();
-  const claimAttemptedRef = useRef(false);
-  const [isClaimingAdmin, setIsClaimingAdmin] = useState(false);
 
-  // Auto-claim admin when actor is ready and user is logged in
-  // Hard timeout: if still claiming after 3s, show dashboard anyway
-  useEffect(() => {
-    if (actor && !actorFetching && identity && !claimAttemptedRef.current) {
-      setIsClaimingAdmin(true);
+  // Login form state
+  const [mobile, setMobile] = useState("");
+  const [password, setPassword] = useState("");
+  const [loginError, setLoginError] = useState("");
 
-      // Safety fallback -- show dashboard after 3s no matter what
-      const fallbackTimer = setTimeout(() => {
-        setIsClaimingAdmin(false);
-        claimAttemptedRef.current = true;
-      }, 3000);
+  // Change password form state
+  const [currentPwd, setCurrentPwd] = useState("");
+  const [newPwd, setNewPwd] = useState("");
+  const [confirmPwd, setConfirmPwd] = useState("");
+  const [pwdError, setPwdError] = useState("");
+  const [pwdSuccess, setPwdSuccess] = useState("");
 
-      actor
-        .claimFirstAdmin()
-        .then(() => {
-          claimAttemptedRef.current = true;
-          qc.invalidateQueries({ queryKey: ["isAdmin"] });
-          qc.invalidateQueries({ queryKey: ["stats"] });
-        })
-        .catch(() => {
-          // Ignore -- may already be claimed; mark attempted to avoid retries
-          claimAttemptedRef.current = true;
-        })
-        .finally(() => {
-          clearTimeout(fallbackTimer);
-          setIsClaimingAdmin(false);
-        });
-
-      return () => clearTimeout(fallbackTimer);
-    }
-  }, [actor, actorFetching, identity, qc]);
-
-  // Show loading while claiming admin
-  if (identity && isClaimingAdmin) {
-    return (
-      <main className="min-h-screen pt-24 pb-16 flex items-center justify-center px-4">
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="w-full max-w-md text-center"
-        >
-          <div className="dark-card rounded-2xl border border-[oklch(0.862_0.196_91.7/0.3)] p-8 space-y-4">
-            <Loader2 className="h-10 w-10 text-primary animate-spin mx-auto" />
-            <p className="text-foreground font-heading font-semibold">
-              Admin access set ho raha hai...
-            </p>
-            <p className="text-muted-foreground font-body text-sm">
-              Kuch seconds mein dashboard khul jaayega.
-            </p>
-          </div>
-        </motion.div>
-      </main>
-    );
+  function handleLogin(e: React.FormEvent) {
+    e.preventDefault();
+    setLoginError("");
+    const ok = login(mobile, password);
+    if (!ok) setLoginError("Mobile number ya password galat hai");
   }
 
-  // Not logged in -- show login prompt
-  if (!identity) {
+  function handleChangePassword(e: React.FormEvent) {
+    e.preventDefault();
+    setPwdError("");
+    setPwdSuccess("");
+    if (newPwd.length < 6) {
+      setPwdError("New password kam se kam 6 characters ka hona chahiye");
+      return;
+    }
+    if (newPwd !== confirmPwd) {
+      setPwdError("New password aur confirm password match nahi karte");
+      return;
+    }
+    const ok = changePassword(currentPwd, newPwd);
+    if (!ok) {
+      setPwdError("Current password galat hai");
+    } else {
+      setPwdSuccess("Password successfully badal gaya!");
+      setCurrentPwd("");
+      setNewPwd("");
+      setConfirmPwd("");
+    }
+  }
+
+  // ── Admin Login Gate ──────────────────────────────────────────────────
+  if (!isAdminAuthenticated) {
     return (
       <main className="min-h-screen pt-24 pb-16 flex items-center justify-center px-4">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="w-full max-w-md text-center"
+          className="w-full max-w-md"
         >
           <div className="dark-card rounded-2xl border border-[oklch(0.862_0.196_91.7/0.3)] p-8 space-y-6">
-            <div className="w-14 h-14 rounded-full bg-[oklch(0.862_0.196_91.7/0.1)] border border-[oklch(0.862_0.196_91.7/0.4)] flex items-center justify-center mx-auto">
-              <LogIn className="h-7 w-7 text-primary" />
+            <div className="flex flex-col items-center gap-3">
+              <div className="w-14 h-14 rounded-full bg-[oklch(0.862_0.196_91.7/0.1)] border border-[oklch(0.862_0.196_91.7/0.4)] flex items-center justify-center">
+                <Shield className="h-7 w-7 text-primary" />
+              </div>
+              <div className="text-center">
+                <h1 className="text-2xl font-display font-bold text-gold-gradient">
+                  Admin Login
+                </h1>
+                <p className="text-muted-foreground font-body text-sm mt-1">
+                  Sirf authorized admin hi andar aa sakte hain
+                </p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-2xl font-display font-bold text-gold-gradient">
-                Admin Login
-              </h1>
-              <p className="text-muted-foreground font-body text-sm mt-2">
-                Admin panel ke liye pehle login karein.
-              </p>
-            </div>
-            <Button
-              onClick={login}
-              data-ocid="admin.login.button"
-              className="w-full bg-primary text-primary-foreground hover:bg-gold-light font-heading font-bold h-12"
+
+            <form
+              onSubmit={handleLogin}
+              className="space-y-4"
+              data-ocid="admin.login.modal"
             >
-              Login with Internet Identity
-            </Button>
+              <div className="space-y-2">
+                <Label
+                  htmlFor="admin-mobile"
+                  className="text-foreground font-body text-sm"
+                >
+                  Mobile Number
+                </Label>
+                <Input
+                  id="admin-mobile"
+                  type="tel"
+                  placeholder="Mobile number daalen"
+                  value={mobile}
+                  onChange={(e) => setMobile(e.target.value)}
+                  data-ocid="admin.mobile.input"
+                  className="bg-[oklch(0.13_0_0)] border-[oklch(0.25_0.02_91.7)] text-foreground focus:border-primary"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label
+                  htmlFor="admin-password"
+                  className="text-foreground font-body text-sm"
+                >
+                  Password
+                </Label>
+                <Input
+                  id="admin-password"
+                  type="password"
+                  placeholder="Password daalen"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  data-ocid="admin.password.input"
+                  className="bg-[oklch(0.13_0_0)] border-[oklch(0.25_0.02_91.7)] text-foreground focus:border-primary"
+                  required
+                />
+              </div>
+
+              {loginError && (
+                <p
+                  className="text-red-400 text-sm font-body"
+                  data-ocid="admin.login.error_state"
+                >
+                  {loginError}
+                </p>
+              )}
+
+              <Button
+                type="submit"
+                data-ocid="admin.login.submit_button"
+                className="w-full bg-primary text-primary-foreground hover:bg-gold-light font-heading font-bold h-12"
+              >
+                Admin Panel Kholen
+              </Button>
+            </form>
           </div>
         </motion.div>
       </main>
     );
   }
 
-  // ─── Logged in → Show Admin Dashboard directly ───────────────────────
+  // ── Full Admin Dashboard ──────────────────────────────────────────────
   const STAT_CARDS = [
     {
       label: "Faculty Members",
@@ -212,19 +249,30 @@ export default function AdminPage() {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="flex items-center gap-4 mb-12"
+          className="flex items-center justify-between mb-12"
         >
-          <div className="w-12 h-12 rounded-full bg-[oklch(0.862_0.196_91.7/0.15)] border border-[oklch(0.862_0.196_91.7/0.4)] flex items-center justify-center">
-            <Shield className="h-6 w-6 text-primary" />
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-full bg-[oklch(0.862_0.196_91.7/0.15)] border border-[oklch(0.862_0.196_91.7/0.4)] flex items-center justify-center">
+              <Shield className="h-6 w-6 text-primary" />
+            </div>
+            <div>
+              <p className="text-primary/70 font-body text-xs tracking-widest uppercase">
+                Admin
+              </p>
+              <h1 className="text-3xl font-display font-bold text-gold-gradient">
+                Dashboard
+              </h1>
+            </div>
           </div>
-          <div>
-            <p className="text-primary/70 font-body text-xs tracking-widest uppercase">
-              Admin
-            </p>
-            <h1 className="text-3xl font-display font-bold text-gold-gradient">
-              Dashboard
-            </h1>
-          </div>
+          <Button
+            onClick={logout}
+            data-ocid="admin.logout.button"
+            variant="outline"
+            size="sm"
+            className="border-[oklch(0.862_0.196_91.7/0.4)] text-primary bg-transparent hover:bg-[oklch(0.862_0.196_91.7/0.1)]"
+          >
+            Logout
+          </Button>
         </motion.div>
 
         {/* Stats */}
@@ -262,6 +310,7 @@ export default function AdminPage() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
+          className="mb-12"
         >
           <h2 className="text-xl font-display font-bold text-gold-gradient section-heading mb-6">
             Quick Actions
@@ -293,18 +342,115 @@ export default function AdminPage() {
           </div>
         </motion.div>
 
-        {/* Admin info */}
+        {/* Change Password Section */}
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.8 }}
-          className="mt-8 p-4 rounded-xl border border-[oklch(0.862_0.196_91.7/0.15)] bg-[oklch(0.862_0.196_91.7/0.03)]"
-          data-ocid="admin.info.panel"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="mb-8"
         >
-          <p className="text-xs text-muted-foreground font-body">
-            <span className="text-primary font-semibold">Admin ID:</span>{" "}
-            {identity.getPrincipal().toString().slice(0, 20)}...
-          </p>
+          <div className="dark-card rounded-2xl border border-[oklch(0.862_0.196_91.7/0.2)] p-6">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-xl bg-[oklch(0.862_0.196_91.7/0.1)] border border-[oklch(0.862_0.196_91.7/0.3)] flex items-center justify-center">
+                <Lock className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <h2 className="text-lg font-display font-bold text-gold-gradient">
+                  Password Badlein
+                </h2>
+                <p className="text-muted-foreground font-body text-xs">
+                  Admin panel ka password yahan se badal sakte hain
+                </p>
+              </div>
+            </div>
+
+            <form
+              onSubmit={handleChangePassword}
+              className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end"
+              data-ocid="admin.change_password.panel"
+            >
+              <div className="space-y-2">
+                <Label
+                  htmlFor="current-pwd"
+                  className="text-foreground font-body text-sm"
+                >
+                  Current Password
+                </Label>
+                <Input
+                  id="current-pwd"
+                  type="password"
+                  placeholder="Purana password"
+                  value={currentPwd}
+                  onChange={(e) => setCurrentPwd(e.target.value)}
+                  data-ocid="admin.current_password.input"
+                  className="bg-[oklch(0.13_0_0)] border-[oklch(0.25_0.02_91.7)] text-foreground focus:border-primary"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label
+                  htmlFor="new-pwd"
+                  className="text-foreground font-body text-sm"
+                >
+                  New Password
+                </Label>
+                <Input
+                  id="new-pwd"
+                  type="password"
+                  placeholder="Naya password (min 6)"
+                  value={newPwd}
+                  onChange={(e) => setNewPwd(e.target.value)}
+                  data-ocid="admin.new_password.input"
+                  className="bg-[oklch(0.13_0_0)] border-[oklch(0.25_0.02_91.7)] text-foreground focus:border-primary"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label
+                  htmlFor="confirm-pwd"
+                  className="text-foreground font-body text-sm"
+                >
+                  Confirm New Password
+                </Label>
+                <Input
+                  id="confirm-pwd"
+                  type="password"
+                  placeholder="Password confirm karein"
+                  value={confirmPwd}
+                  onChange={(e) => setConfirmPwd(e.target.value)}
+                  data-ocid="admin.confirm_password.input"
+                  className="bg-[oklch(0.13_0_0)] border-[oklch(0.25_0.02_91.7)] text-foreground focus:border-primary"
+                  required
+                />
+              </div>
+              <div className="sm:col-span-3 flex flex-col gap-2">
+                {pwdError && (
+                  <p
+                    className="text-red-400 text-sm font-body"
+                    data-ocid="admin.change_password.error_state"
+                  >
+                    {pwdError}
+                  </p>
+                )}
+                {pwdSuccess && (
+                  <p
+                    className="text-green-400 text-sm font-body"
+                    data-ocid="admin.change_password.success_state"
+                  >
+                    {pwdSuccess}
+                  </p>
+                )}
+                <Button
+                  type="submit"
+                  data-ocid="admin.change_password.submit_button"
+                  className="w-full sm:w-auto bg-primary text-primary-foreground hover:bg-gold-light font-heading font-semibold"
+                >
+                  Password Badlein
+                </Button>
+              </div>
+            </form>
+          </div>
         </motion.div>
       </div>
     </main>

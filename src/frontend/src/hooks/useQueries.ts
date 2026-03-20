@@ -14,30 +14,25 @@ import {
   UserRole,
 } from "../backend.d";
 import { useActor } from "./useActor";
-import { useInternetIdentity } from "./useInternetIdentity";
+import { useAdminAuth } from "./useAdminAuth";
 
 export type { StudentRecord, FeeDetail };
 
 export { ClassLevel, ContentType, UserRole };
 
 // ── Auth / Role ───────────────────────────────────────────────────────
-// Real admin check: calls backend isCallerAdmin() to verify.
+// Admin check: only password-authenticated admin gets access
 export function useIsAdmin() {
-  const { actor, isFetching } = useActor();
-  const { identity } = useInternetIdentity();
+  const { isAdminAuthenticated } = useAdminAuth();
+
   return useQuery<boolean>({
-    queryKey: ["isAdmin"],
+    queryKey: ["isAdmin", isAdminAuthenticated],
     queryFn: async () => {
-      if (!actor || !identity) return false;
-      try {
-        return await actor.isCallerAdmin();
-      } catch {
-        return false;
-      }
+      // Only password-authenticated admin gets access -- no backend fallback
+      return isAdminAuthenticated;
     },
-    enabled: !!actor && !isFetching && !!identity,
+    enabled: true,
     staleTime: 1000 * 60 * 5,
-    refetchOnMount: true,
   });
 }
 

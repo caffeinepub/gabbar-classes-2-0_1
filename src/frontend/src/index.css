@@ -1,0 +1,274 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Fonts ─────────────────────────────────────────────────────────── */
+@font-face {
+  font-family: "Bricolage Grotesque";
+  src: url("/assets/fonts/BricolageGrotesque[opsz,wdth,wght].woff2")
+    format("woff2");
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Playfair Display";
+  src: url("/assets/fonts/PlayfairDisplay[wght].woff2") format("woff2");
+  font-weight: 400 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Cabinet Grotesk";
+  src: url("/assets/fonts/CabinetGrotesk-Variable.woff2") format("woff2");
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+@layer base {
+  :root {
+    --radius: 0.5rem;
+
+    /* ── Golden & Black Theme ── */
+    /* Background: deep black */
+    --background: 0.08 0 0;
+    --foreground: 0.97 0 0;
+
+    /* Card: dark charcoal */
+    --card: 0.13 0 0;
+    --card-foreground: 0.95 0 0;
+
+    /* Popover */
+    --popover: 0.13 0 0;
+    --popover-foreground: 0.95 0 0;
+
+    /* Primary: Gold #FFD700 → oklch ≈ 0.862 0.196 91.7 */
+    --primary: 0.862 0.196 91.7;
+    --primary-foreground: 0.08 0 0;
+
+    /* Secondary: dark */
+    --secondary: 0.18 0 0;
+    --secondary-foreground: 0.95 0 0;
+
+    /* Muted */
+    --muted: 0.15 0 0;
+    --muted-foreground: 0.55 0 0;
+
+    /* Accent: bright gold #FFC200 → oklch ≈ 0.83 0.19 84 */
+    --accent: 0.83 0.19 84;
+    --accent-foreground: 0.08 0 0;
+
+    /* Destructive */
+    --destructive: 0.577 0.245 27.325;
+    --destructive-foreground: 0.985 0 0;
+
+    /* Border & Input: subtle gold tint */
+    --border: 0.25 0.02 91.7;
+    --input: 0.2 0.02 91.7;
+    --ring: 0.862 0.196 91.7;
+
+    /* Charts */
+    --chart-1: 0.862 0.196 91.7;
+    --chart-2: 0.75 0.15 84;
+    --chart-3: 0.6 0.1 70;
+    --chart-4: 0.45 0.07 50;
+    --chart-5: 0.3 0.04 30;
+
+    /* Sidebar */
+    --sidebar: 0.1 0 0;
+    --sidebar-foreground: 0.95 0 0;
+    --sidebar-primary: 0.862 0.196 91.7;
+    --sidebar-primary-foreground: 0.08 0 0;
+    --sidebar-accent: 0.18 0 0;
+    --sidebar-accent-foreground: 0.95 0 0;
+    --sidebar-border: 0.25 0.02 91.7;
+    --sidebar-ring: 0.862 0.196 91.7;
+
+    /* Custom gold tokens */
+    --gold-light: 0.92 0.19 91.7;
+    --gold: 0.862 0.196 91.7;
+    --gold-dark: 0.75 0.16 84;
+    --gold-dim: 0.55 0.1 84;
+    --black-deep: 0.06 0 0;
+    --black-base: 0.08 0 0;
+    --black-surface: 0.13 0 0;
+    --black-elevated: 0.18 0 0;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    color-scheme: dark;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: "Cabinet Grotesk", "Bricolage Grotesque", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    background-color: oklch(0.08 0 0);
+  }
+}
+
+@layer utilities {
+  /* Gold gradient text */
+  .text-gold-gradient {
+    background: linear-gradient(
+      135deg,
+      oklch(0.92 0.19 91.7) 0%,
+      oklch(0.862 0.196 91.7) 40%,
+      oklch(0.75 0.16 84) 100%
+    );
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Gold shimmer animation */
+  .gold-shimmer {
+    background: linear-gradient(
+      90deg,
+      oklch(0.75 0.16 84) 0%,
+      oklch(0.92 0.19 91.7) 25%,
+      oklch(0.862 0.196 91.7) 50%,
+      oklch(0.92 0.19 91.7) 75%,
+      oklch(0.75 0.16 84) 100%
+    );
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: shimmer 3s linear infinite;
+  }
+
+  @keyframes shimmer {
+    0% {
+      background-position: 0% center;
+    }
+    100% {
+      background-position: 200% center;
+    }
+  }
+
+  /* Gold glow */
+  .gold-glow {
+    box-shadow: 0 0 20px oklch(0.862 0.196 91.7 / 0.3), 0 0 60px
+      oklch(0.862 0.196 91.7 / 0.1);
+  }
+
+  .gold-glow-sm {
+    box-shadow: 0 0 10px oklch(0.862 0.196 91.7 / 0.25), 0 2px 4px
+      oklch(0 0 0 / 0.5);
+  }
+
+  .gold-glow-text {
+    text-shadow: 0 0 20px oklch(0.862 0.196 91.7 / 0.5);
+  }
+
+  /* Gold border gradient */
+  .gold-border {
+    border: 1px solid oklch(0.862 0.196 91.7 / 0.4);
+  }
+
+  .gold-border-hover {
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  }
+
+  .gold-border-hover:hover {
+    border-color: oklch(0.862 0.196 91.7 / 0.8);
+    box-shadow: 0 0 20px oklch(0.862 0.196 91.7 / 0.2);
+  }
+
+  /* Card styles */
+  .dark-card {
+    background: oklch(0.13 0 0);
+    border: 1px solid oklch(0.25 0.02 91.7);
+  }
+
+  .dark-card-elevated {
+    background: oklch(0.16 0.005 91.7);
+    border: 1px solid oklch(0.3 0.03 91.7);
+  }
+
+  /* Noise texture overlay */
+  .noise-overlay::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Diagonal accent line */
+  .diagonal-line {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .diagonal-line::after {
+    content: "";
+    position: absolute;
+    top: -50%;
+    right: -10%;
+    width: 1px;
+    height: 200%;
+    background: linear-gradient(
+      to bottom,
+      transparent,
+      oklch(0.862 0.196 91.7 / 0.3),
+      transparent
+    );
+    transform: rotate(15deg);
+  }
+
+  /* Section heading accent */
+  .section-heading::after {
+    content: "";
+    display: block;
+    width: 80px;
+    height: 3px;
+    background: linear-gradient(
+      90deg,
+      oklch(0.862 0.196 91.7),
+      oklch(0.75 0.16 84 / 0.3)
+    );
+    margin-top: 0.75rem;
+    border-radius: 2px;
+  }
+
+  .section-heading-center::after {
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: oklch(0.08 0 0);
+}
+::-webkit-scrollbar-thumb {
+  background: oklch(0.25 0.02 91.7);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.862 0.196 91.7 / 0.6);
+}
+
+/* Focus visible */
+:focus-visible {
+  outline: 2px solid oklch(0.862 0.196 91.7);
+  outline-offset: 2px;
+}
+
+/* Selection */
+::selection {
+  background: oklch(0.862 0.196 91.7 / 0.3);
+  color: oklch(0.97 0 0);
+}
